@@ -10,14 +10,11 @@ The purpose of this repository is to house the data, code, figures, and products
 To get started, follow these instructions to install R and RStudio adapted from [Copyright (c) Software Carpentry](http://software-carpentry.org).
 
 ### R and RStudio
-- Download and install [R, a free software environment for statistical computing and graphics](https://www.r-project.org/) from [CRAN](https://cran.rstudio.com/), the Comprehensive R Archive Network. It is highly recommended to install a precompiled binary distribution for your operating system – use the links up at the top of the CRAN page linked to above!
+- Download and install R, a free software environment for statistical computing and graphics from [CRAN](https://cran.rstudio.com/), the Comprehensive R Archive Network. It is highly recommended to install a precompiled binary distribution for your operating system – use the links up at the top of the CRAN page linked to above!
 
 - Install RStudio's IDE (stands for integrated development environment), a powerful user interface for R: http://www.rstudio.com/ide/download/
   - RStudio includes a text editor, so you do not have to install another stand-alone editor.
   - RStudio includes an interface to Git and GitHub. You will still need to install Git (covered below) but RStudio provides a basic GUI for interacting with Git(Hub).
-  
-- Install [Git](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/set-up-git)
-  - To access this repository, you will need to create an account on [GitHub.com](https://docs.github.com/en/free-pro-team@latest/github/getting-started-with-github/signing-up-for-a-new-github-account).
   
 ### Launching RStudio
 Do whatever is appropriate for your OS to launch RStudio. You should get a window similar to the interface you see [here](https://rstudio.com/products/rstudio/). 
@@ -43,6 +40,14 @@ To clone this repository onto your local environment, follow these steps:
 6. Paste the repository URL and enter TAB to move to the Project directory name field.
 7. Click `Create Project`.
 8. Finish reading the README.md file
+
+### Required Packages
+R is an extensible system where people can share useful code in the form of *packages*. All the packages required for this project will load in the `.Rprofile` file upon opening the project. All you need to do is install the packages. Run the code below to install all of the required packages:
+```
+pkgs <- c("chron", "data.table", "dplyr", "ggplot2", # package names
+            "here", "jsonlite", "leaflet", "tidyr")
+install.packages(pkgs, dependencies = TRUE) # install packages
+```
 
 ### Further Resources
 The above will get your basic setup ready but here are some links if you are interested in reading a bit further.
@@ -91,7 +96,7 @@ This is what you are reading now. It contains everything you need to know to und
 This is the R project file for the Bus Stop Census analysis. An R Project is simply a working directory designated with a .RProj file. When you open a project (using File/Open Project in RStudio or by double–clicking on the .Rproj file outside of R), the working directory will automatically be set to the directory that the .RProj file is located in.
 
 ### .RProfile
-This is a script that runs every time R starts. The `.RProfile` included in this repository will run each time the `Bus Stop Census.RProj` file is opened. The project `.RProfile` script is important because it installs and loads the libraries needed to run the code as well as the GTFS data that is the key to linking bus stop IDs with their associated route, coordinate, and schedule information.
+This is a script that runs every time R starts. The `.RProfile` included in this repository will run each time the `Bus Stop Census.RProj` file is opened. The project `.RProfile` script is important because it loads the libraries needed to run the code as well as the GTFS data that is the key to linking bus stop IDs with their associated route, coordinate, and schedule information.
 
 ### data/raw_data
 This folder contains the raw data used in the analysis. The raw data means it:
