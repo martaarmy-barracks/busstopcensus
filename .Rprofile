@@ -1,17 +1,13 @@
 
-  ## IMPORT LIBRARIES -------------------------------------------------------------------------------------------------
-  library(jsonlite)
-  library(tidyr)
-  library(dplyr)
-  library(data.table)
-  library(chron)
-  library(ggplot2)
-  library(leaflet)
-  library(here)
+  ## LOAD LIBRARIES -------------------------------------------------------------------------------------------------
+  pkgs <- c("chron", "data.table", "dplyr", "ggplot2", # package names
+            "here", "jsonlite", "leaflet", "tidyr")
+  
+  inst = lapply(pkgs, library, character.only = TRUE) # load packages
   
   ## ASSIGN METADATA --------------------------------------------------------------------------------------------------
-  peak_am <- c(6,7,8)
-  peak_pm <- c(15,16,17,18)
+  peak_am <- c(6,7,8) # denote peak am hours
+  peak_pm <- c(15,16,17,18) # denote peak pm hours
   hour_order <- c(4,5,6,7,8,9,10,
                   11,12,13,14,15,
                   16,17,18,19,20,
@@ -19,23 +15,34 @@
   
   
   ## IMPORT GTFS DATA -------------------------------------------------------------------------------------------------
-  stops <- fread(here("data", "raw_data", "gtfs","stops.txt"),stringsAsFactors = FALSE,
+  stops <- fread(here("data", "raw_data", "gtfs","stops.txt"), # set relative path to data source
+                 stringsAsFactors = FALSE,
                  colClasses = c("character","character","character","double","double"))
-  routes <- fread(here("data","raw_data", "gtfs","routes.txt"), stringsAsFactors = FALSE, 
-                  colClasses = c("character","numeric","character","character",
+  
+  routes <- fread(here("data","raw_data", "gtfs","routes.txt"), 
+                  stringsAsFactors = FALSE, 
+                  colClasses = c("character","character","character","character",
                                  "integer","character","character","character"),
                   select = c("route_id","route_short_name","route_long_name","route_type"))
-  stop_times <- fread(here("data","raw_data", "gtfs","stop_times.txt"),stringsAsFactors = FALSE, 
+  
+  stop_times <- fread(here("data","raw_data", "gtfs","stop_times.txt"),
+                      stringsAsFactors = FALSE, 
                       colClasses = c("character","character","character","character","integer"),
                       select = c("trip_id","arrival_time","stop_id","stop_sequence"))
-  shapes <- fread(here("data","raw_data", "gtfs","shapes.txt"), stringsAsFactors = FALSE, 
+  
+  shapes <- fread(here("data","raw_data", "gtfs","shapes.txt"), 
+                  stringsAsFactors = FALSE, 
                   colClasses = c("character","double","double","integer"))
-  trips <- fread(here("data","raw_data", "gtfs","trips.txt"),stringsAsFactors = FALSE,
+  
+  trips <- fread(here("data","raw_data", "gtfs","trips.txt"),
+                 stringsAsFactors = FALSE,
                  colClasses = c("character","integer","character",
                                 "character","integer","character",
                                 "character"),
                  drop = c("block_id"))
-  calendar <- fread(here("data","raw_data", "gtfs","calendar.txt"), stringsAsFactors = FALSE, 
+  
+  calendar <- fread(here("data","raw_data", "gtfs","calendar.txt"), 
+                    stringsAsFactors = FALSE, 
                     colClasses = c("integer","character","character",
                                    "character","character","character",
                                    "character","character","character",
@@ -44,11 +51,12 @@
   
   
   ## CLEAN GTFS DATA --------------------------------------------------------------------------------------------------
-  # Add Service Descriptors
+  # Convert service_id to day of the week text
   calendar <- calendar %>% mutate(.,service_type = 
                                     with(.,case_when((service_id == 3) ~ "Saturday",
                                                      (service_id == 4) ~ "Sunday",
                                                      (service_id == 5) ~ "Weekday")))
+  # Convert route_type to bus or rail
   routes <- routes %>% mutate(.,route_type_desc = 
                                 with(.,case_when((route_type == 3) ~ "Bus",
                                                  (route_type == 1) ~ "Rail")))
