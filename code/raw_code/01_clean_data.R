@@ -21,12 +21,25 @@
                                                    select(-Timestamp_Sub)
   
   # Collect GTFS Stop Data to Compare to Survey Responses
-  stop_comparison_data <- stops %>% select(stop_id, stop_name, stop_lat, stop_lon) %>%
+  stop_comparison_data <- stops %>% full_join(post_pandemic_stops, by = c("stop_id")) %>%                                # Join pre-pandemic stop data with end of 2020 stop data
+                                             # mutate(name_diff = ifelse(stop_name.x != stop_name.y, "FLAG", ""),
+                                             #         lat_diff = ifelse(stop_lat.x != stop_lat.y, "FLAG", ""),
+                                             #         lon_diff = ifelse(stop_lon.x != stop_lon.y, "FLAG", "")) %>%
+                                              mutate(stop_code = ifelse(is.na(stop_code.x), stop_code.y, stop_code.x),
+                                                     stop_name = ifelse(is.na(stop_name.x), stop_name.y, stop_name.x),
+                                                     stop_lat = ifelse(is.na(stop_lat.x), stop_lat.y, stop_lat.x),
+                                                     stop_lon = ifelse(is.na(stop_lon.x), stop_lon.y, stop_lon.x)) %>%
+                                              select(stop_id, stop_code, stop_name, stop_lat, stop_lon) %>%
                                     separate(stop_name, c("main_street_or_station", "cross_street"), sep = "@")
   
-  # Join Survey Responses and GTFS Data
-  raw_df_deduped_clean_joined <- raw_df_deduped_clean %>% left_join(stop_comparison_data, by = c("stop_id"))
+  raw_df_deduped_clean_joined <- raw_df_deduped_clean %>% left_join(stop_comparison_data, # Join Survey Responses and GTFS Data
+                                                                    by = c("Stop_ID" = "stop_id")) 
   
+  no_stop_id_df <- raw_df_deduped_clean_joined %>% dplyr::filter(is.na(main_street_or_station)) # Get list of Stop_IDs not in GTFS Data
+  
+  write.csv(no_stop_id_df, here("data", "raw_data", "validation", "No Stop ID Survey Records.csv"), row.names = FALSE) # Export records for examination
+  
+  # Collect Duplicate Records by Stop_ID
   
   #Data Output
   write.csv(survey_df, file = here("data", "tidy_data", "pre_processed_survey_df.csv"))

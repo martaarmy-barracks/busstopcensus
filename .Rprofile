@@ -15,33 +15,33 @@
   
   
   ## IMPORT GTFS DATA -------------------------------------------------------------------------------------------------
-  stops <- fread(here("data", "raw_data", "gtfs","stops.txt"), # set relative path to data source
+  stops <- fread(here("data", "raw_data", "gtfs", "2019-12-06", "stops.txt"), # set relative path to data source
                  stringsAsFactors = FALSE,
                  colClasses = c("character","character","character","double","double"))
   
-  routes <- fread(here("data","raw_data", "gtfs","routes.txt"), 
+  routes <- fread(here("data","raw_data", "gtfs", "2019-12-06", "routes.txt"), 
                   stringsAsFactors = FALSE, 
                   colClasses = c("character","character","character","character",
                                  "integer","character","character","character"),
                   select = c("route_id","route_short_name","route_long_name","route_type"))
   
-  stop_times <- fread(here("data","raw_data", "gtfs","stop_times.txt"),
+  stop_times <- fread(here("data","raw_data", "gtfs", "2019-12-06", "stop_times.txt"),
                       stringsAsFactors = FALSE, 
                       colClasses = c("character","character","character","character","integer"),
                       select = c("trip_id","arrival_time","stop_id","stop_sequence"))
   
-  shapes <- fread(here("data","raw_data", "gtfs","shapes.txt"), 
+  shapes <- fread(here("data","raw_data", "gtfs", "2019-12-06", "shapes.txt"), 
                   stringsAsFactors = FALSE, 
                   colClasses = c("character","double","double","integer"))
   
-  trips <- fread(here("data","raw_data", "gtfs","trips.txt"),
+  trips <- fread(here("data","raw_data", "gtfs", "2019-12-06", "trips.txt"),
                  stringsAsFactors = FALSE,
                  colClasses = c("character","integer","character",
                                 "character","integer","character",
                                 "character"),
                  drop = c("block_id"))
   
-  calendar <- fread(here("data","raw_data", "gtfs","calendar.txt"), 
+  calendar <- fread(here("data","raw_data", "gtfs", "2019-12-06", "calendar.txt"), 
                     stringsAsFactors = FALSE, 
                     colClasses = c("integer","character","character",
                                    "character","character","character",
@@ -49,6 +49,9 @@
                                    "character"),
                     select = c("service_id"))
   
+  post_pandemic_stops <- fread(here("data", "raw_data", "gtfs", "2020-12-04","stops.txt"), # set relative path to data source
+                               stringsAsFactors = FALSE,
+                               colClasses = c("character","character","character","double","double"))
   
   ## CLEAN GTFS DATA --------------------------------------------------------------------------------------------------
   # Convert service_id to day of the week text
