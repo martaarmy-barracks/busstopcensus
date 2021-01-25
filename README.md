@@ -101,9 +101,82 @@ This is a script that runs every time R starts. The `.RProfile` included in this
 ### data/raw_data
 This folder contains the raw data used in the analysis. The raw data means it:
 - No software was ran on the data
-- The data was not manipulated any way
+- The data was not manipulated any way*
 - No data was removed from the data set
 - The data was not summarized in any way
+
+\* There is an exception to this criteria. Before being uploaded, the emails from the raw data were masked to protect the surveyor's privacy and the data was scrubbed for any other personal identifying information. In addition, the column names were also adjusted to be read easily by the cleaning script.
+
+The following is a list of all the fields and the question they match with or description if not related to a survey question:
+- **Record_ID**
+  - This is a unique ID number given to all survey responses. This record ID is used to identify specific responses during the cleaning process.
+- **Stop_ID**
+  - This is the Stop ID the survey is submitted for. Most Stop IDs are prefilled by the Bus Stop Census online surveying platform.
+- **Timestamp**
+- **Email_Masked**
+  - What is your email address?
+    - The real emails have been masked to protect the privacy of the surveyor.
+- **Main_Street**
+  - What street or road is the bus stop located on?
+    - The main street is the street the route runs along. In other words, it is the street the bus drives on. This field is prefilled by the Bus Stop Census online surveying platform.
+- **Nearest_Landmark**
+  - What is the nearest cross street or landmark?
+    - This field can either be a nearby landmark/address or a cross street that runs perpendicular to the main street. This field is prefilled by the Bus Stop Census online surveying platform.
+- **Routes**
+  - What routes serve this bus stop?
+    - This field is prefilled by the Bus Stop Census online surveying platform.
+- **Direction** 
+  - What direction is the bus heading from this stop?
+- **Seating**
+  - Does the stop have a bench or other seating?
+- **Shelter**
+  - Does this stop have a shelter?
+- **Trash_Can**
+  - Does this bus stop include a trash can?
+- **Cleanliness**
+  - Does the bus stop have any of these cleanliness issues?
+- **Line_of_Sight**
+  - If you had to flag the bus down, would you have to step into the roadway or lean into traffic?
+- **Wayfinding**	
+  - What wayfining information is present at the stop?
+- **Wayfinding Accessbility**
+  - Is the wayfinding information  located at the eye level of a person using a wheelchair?
+- **Lighting**
+  - Is the stop well lit at night?
+- **Sidewalk**
+  - Is there a paved sidewalk to the boarding area of the bus?
+- **Obstacles**
+  - Are there any obstacles at or on the path to this bus stop that would limit the mobility of a person using a wheelchair or stroller?
+- **Obstacle_Desc**
+  - If there are obstacles, please briefly describe them.
+- **Boarding_Area**
+  - What is the surface of the boarding area?
+- **Crosswalks**
+  - Is there a clearly marked crosswalk within 100 feet of the stop?	
+- **Crosswalk_Features**
+  - What features does the crosswalk have?
+- **Behavior**
+  - Have you observed any of the following unsafe behavior at this stop?
+- **On_Site_Survey**
+  - Did you complete this survey at the physical location of the bus stop?
+- **Additional_Comments**	
+  - Do you have any additional observations or anecdotes for this bus stop?
+- **Resent.From**
+  - Extraneous column that was used when migrating data during the Bus Stop Census. This column has no use for analysis.
+- **Curbside.Boarding**
+  - This field was for a question that was used at the start of the survey but was removed shortly after data collection began. The question was "Is there a paved area up to the edge of the curb for passengers to board the bus?" The boarding area question replaced this question.
+- **Another.HUGE.Inconvenience**
+  - Error in additional comments field created this field. There is only one Stop_ID with data in this field. The data from this field should be merged with the Additional_Comments field.
+- **To**
+  - Extraneous column that was used when migrating data during the Bus Stop Census. This column has no use for analysis.
+- **Date**
+  - Extraneous column that was used when migrating data during the Bus Stop Census. This column has no use for analysis.
+- **Subject**
+  - Extraneous column that was used when migrating data during the Bus Stop Census. This column has no use for analysis.
+- **Cc**
+  - Extraneous column that was used when migrating data during the Bus Stop Census. This column has no use for analysis.
+- **X.From**
+  - Extraneous column that was used when migrating data during the Bus Stop Census. This column has no use for analysis.
 
 ### data/processed_data
 This folder contains cleaned and validated data. This is the data that will be used as the starting point for all Bus Stop Census analyses.
