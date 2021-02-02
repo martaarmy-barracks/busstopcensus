@@ -1,9 +1,12 @@
 
   ## LOAD LIBRARIES -------------------------------------------------------------------------------------------------
-  pkgs <- c("chron", "data.table", "dplyr", "ggplot2", # package names
-            "here", "jsonlite", "leaflet", "tidyr")
+  pkgs <- c("chron", "data.table", "dplyr", "geosphere", "ggplot2", # package names
+            "googlesheets4", "here", "jsonlite", "leaflet", "stringdist", "tidyr")
   
   inst = lapply(pkgs, library, character.only = TRUE) # load packages
+  
+  ## SOURCE FUNCTIONS -------------------------------------------------------------------------------------------------
+  source(here("code","functions","bus_stop_census_code_functions.R"))
   
   ## ASSIGN METADATA --------------------------------------------------------------------------------------------------
   peak_am <- c(6,7,8) # denote peak am hours
@@ -13,72 +16,60 @@
                   16,17,18,19,20,
                   21,22,23,0,1,2)
   
-  
   ## IMPORT GTFS DATA -------------------------------------------------------------------------------------------------
-  stops <- fread(here("data", "raw_data", "gtfs", "2019-12-06", "stops.txt"), # set relative path to data source
-                 stringsAsFactors = FALSE,
-                 colClasses = c("character","character","character","double","double"))
+  # List order -> c(stops,  routes, stop_times, shapes, trips, calendar, route_data, stop_data)
+  gtfs_dec_2019_df_list <- importGTFS("2019-12-06")
+  gtfs_dec_2020_df_list <- importGTFS("2020-12-04")
   
-  routes <- fread(here("data","raw_data", "gtfs", "2019-12-06", "routes.txt"), 
-                  stringsAsFactors = FALSE, 
-                  colClasses = c("character","character","character","character",
-                                 "integer","character","character","character"),
-                  select = c("route_id","route_short_name","route_long_name","route_type"))
   
-  stop_times <- fread(here("data","raw_data", "gtfs", "2019-12-06", "stop_times.txt"),
-                      stringsAsFactors = FALSE, 
-                      colClasses = c("character","character","character","character","integer"),
-                      select = c("trip_id","arrival_time","stop_id","stop_sequence"))
   
-  shapes <- fread(here("data","raw_data", "gtfs", "2019-12-06", "shapes.txt"), 
-                  stringsAsFactors = FALSE, 
-                  colClasses = c("character","double","double","integer"))
   
-  trips <- fread(here("data","raw_data", "gtfs", "2019-12-06", "trips.txt"),
-                 stringsAsFactors = FALSE,
-                 colClasses = c("character","integer","character",
-                                "character","integer","character",
-                                "character"),
-                 drop = c("block_id"))
+  ## SUMMARIZE STOP ROUTE DATA ----------------------------------------------------------------------------------------
+  route_data_2019 <- gtfs_dec_2019_df_list[[7]]
+  stop_route_summary_2019 <- route_data_2019 %>% distinct(stop_id,
+                                                     stop_name,
+                                                     stop_lon,
+                                                     stop_lat,
+                                                     route_short_name,
+                                                     direction_id) %>%
+                                             mutate(Direction = ifelse(direction_id == 1, "SB/WB", "NB/EB")) %>%
+                                             arrange(stop_id, as.integer(route_short_name)) %>%
+                                             select(-direction_id) %>%
+                                             dplyr::group_by(stop_id, stop_name, stop_lon, stop_lat) %>%
+                                             dplyr::summarise(Routes = paste(route_short_name, collapse = ", "),
+                                                             Direction = paste(Direction, collapse = ", "))
   
-  calendar <- fread(here("data","raw_data", "gtfs", "2019-12-06", "calendar.txt"), 
-                    stringsAsFactors = FALSE, 
-                    colClasses = c("integer","character","character",
-                                   "character","character","character",
-                                   "character","character","character",
-                                   "character"),
-                    select = c("service_id"))
+  route_data_2020 <- gtfs_dec_2020_df_list[[7]]
+  stop_route_summary_2020 <- route_data_2020 %>% distinct(stop_id,
+                                                          stop_name,
+                                                          stop_lon,
+                                                          stop_lat,
+                                                          route_short_name,
+                                                          direction_id) %>%
+                                                  mutate(Direction = ifelse(direction_id == 1, "SB/WB", "NB/EB")) %>%
+                                                  arrange(stop_id, as.integer(route_short_name)) %>%
+                                                  select(-direction_id) %>%
+                                                  dplyr::group_by(stop_id, stop_name, stop_lon, stop_lat) %>%
+                                                  dplyr::summarise(Routes = paste(route_short_name, collapse = ", "),
+                                                                   Direction = paste(Direction, collapse = ", "))
   
-  post_pandemic_stops <- fread(here("data", "raw_data", "gtfs", "2020-12-04","stops.txt"), # set relative path to data source
-                               stringsAsFactors = FALSE,
-                               colClasses = c("character","character","character","double","double"))
   
-  ## CLEAN GTFS DATA --------------------------------------------------------------------------------------------------
-  # Convert service_id to day of the week text
-  calendar <- calendar %>% mutate(.,service_type = 
-                                    with(.,case_when((service_id == 3) ~ "Saturday",
-                                                     (service_id == 4) ~ "Sunday",
-                                                     (service_id == 5) ~ "Weekday")))
-  # Convert route_type to bus or rail
-  routes <- routes %>% mutate(.,route_type_desc = 
-                                with(.,case_when((route_type == 3) ~ "Bus",
-                                                 (route_type == 1) ~ "Rail")))
+  # Collect GTFS Stop Data to Compare to Survey Responses
+  stop_comparison_data <- stop_route_summary_2019 %>% full_join(stop_route_summary_2020, by = c("stop_id")) %>%       # Join pre-pandemic stop data with end of 2020 stop data
+    rowwise() %>%
+    mutate(name_diff = ifelse(stop_name.x != stop_name.y, "FLAG", ""),
+           name_dist = stringdist(stop_name.x, stop_name.y),
+           lat_diff = ifelse(stop_lat.x != stop_lat.y, "FLAG", ""),
+           lon_diff = ifelse(stop_lon.x != stop_lon.y, "FLAG", ""),
+           coord_dist = distm(c(stop_lon.x,stop_lat.x), c(stop_lon.y, stop_lat.y), fun = distHaversine)) 
   
-  # Format Stop Times To be 24 hour
-  stop_times$arrival_time_adj <- ifelse(substr(stop_times$arrival_time,1,2) == "24",
-                                        sub("24","00",stop_times$arrival),
-                                        ifelse(substr(stop_times$arrival_time,1,2) == "25",
-                                               sub("25","01",stop_times$arrival_time),
-                                               ifelse(substr(stop_times$arrival_time,1,2) == "26",
-                                                      sub("26","02",stop_times$arrival_time), stop_times$arrival_time)))
-  
-  ## JOIN GTFS DATA ---------------------------------------------------------------------------------------------------
-  route_data <- inner_join(stop_times,trips,by="trip_id") %>%
-    inner_join(.,stops,by="stop_id") %>%
-    inner_join(.,routes,by="route_id") %>%
-    inner_join(.,calendar,by="service_id") %>%
-    filter(route_type_desc == "Bus")
-  
-  stop_data <- inner_join(stop_times,stops,by="stop_id") %>%
-    select(trip_id,stop_id,stop_sequence,stop_name,arrival_time)
-  
+  final_stop_list <- stop_comparison_data %>%
+    mutate(Stop_Name = ifelse(is.na(stop_name.x), stop_name.y, stop_name.x),
+           Stop_Lat = ifelse(is.na(stop_lat.x), stop_lat.y, stop_lat.x),
+           Stop_Lon = ifelse(is.na(stop_lon.x), stop_lon.y, stop_lon.x),
+           Routes   = ifelse(is.na(Routes.x), Routes.y, Routes.x),
+           Direction = ifelse(is.na(Direction.x), Direction.y, Direction.x)) %>%
+    select(stop_id, Stop_Name, Stop_Lat, Stop_Lon, Routes, Direction) %>%
+    separate(Stop_Name, c("Main_Street_or_Station", "Cross_Street"), sep = "@") %>%
+    mutate(Main_Street_or_Station = trimws(Main_Street_or_Station),
+           Cross_Street = trimws(Cross_Street))
