@@ -1,7 +1,7 @@
 
   ## LOAD LIBRARIES -------------------------------------------------------------------------------------------------
   pkgs <- c("chron", "data.table", "dplyr", "geosphere", "ggplot2", # package names
-            "googlesheets4", "here", "jsonlite", "leaflet", "stringdist", "tidyr")
+            "googlesheets4", "here", "jsonlite", "leaflet", "stringdist", "stringr", "tidyr")
   
   inst = lapply(pkgs, library, character.only = TRUE) # load packages
   

@@ -1,10 +1,12 @@
 
   correctRecords <- function(survey_df, corrections_df, source_sheet) {
-    
-    corrections_subset <- subset(corrections_df, Correction_Source_Sheet == source_sheet)
-    print("subsetted")
+    # The correctRecords functions applies corrections specified in the Bus Stop Census Corrections Log, located here,
+    # https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing,
+    # to the raw data.
+    corrections_subset <- subset(corrections_df, Correction_Source_Sheet == source_sheet) # Subset corrections data based on the sheet the corrections originated from
+    print("subsetted") # Print command showing the corrections data has been subsetted
     for (row in 1:nrow(corrections_subset)) {
-     if (corrections_subset[row, "Change"] == "Replace") {
+     if (corrections_subset[row, "Change"] == "Replace") { 
        print("replace")
        record_id <- corrections_subset[row, "Record_ID"]
        record_id <- record_id[[1]]
@@ -30,19 +32,7 @@
     return(survey_df)
   }
 
-  corrections_df[corrections_df$Record_ID == 42, "Stop_ID"] <- "212715"
-  # test_survey_df <- data.frame( x = c(1,2,3,4,5),
-  #                               y = c("a", "b", "c", "d", "e"),
-  #                               z = c("f", "g", "h", "i", "j"))
-  # 
-  # corrections_test_df <- data.frame(record = c(1,3,4),
-  #                                   field = c("y", "","z"),
-  #                                   action = c("replace", "delete", "replace"),
-  #                                   value = c("s","","@"),
-  #                                   source = c("id", "id", "missing"))
-  # 
-  # correctRecords(test_survey_df, corrections_test_df, "missing")
-  
+
   importGTFS <- function(gtfs_date) {
     stops <- fread(here("data", "raw_data", "gtfs", gtfs_date, "stops.txt"), # set relative path to data source
                             stringsAsFactors = FALSE,
