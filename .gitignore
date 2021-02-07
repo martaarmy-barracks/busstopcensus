@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 data/raw_data/private/Test Data.txt
+code/raw_code/00_anonymize_data.R
+data/raw_data/private/2021-01-01 stopcensus_responses.json
+data/raw_data/private/key.csv
