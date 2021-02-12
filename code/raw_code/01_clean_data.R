@@ -1,5 +1,5 @@
   
-  ########################### READ ME ###########################
+  ###################### INTRODUCTION TO THE CLEAN DATA SCRIPT ######################### 
   # A table of all cleaning tasks performed, their purpose, and their location are contained within the Bus Stop Corrections Log at the following linK:
   # https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing
   #
@@ -11,26 +11,29 @@
   # listed in the "Data Cleaning Tasks" sheet in the Bus Stop Census Corrections Log.  
 
 
-  ## IMPORT DATA ----------------------------------------------------------------------------------------------------------------
-  # Import Bus Stop Census Survey Responses
-  raw_df <- read.csv(here("data", "raw_data", "survey", "2021-01-01_raw_bus_stop_census_responses.csv"))
+  ###################### IMPORT DATA ######################### 
+  raw_df <- read.csv(here("data", "raw_data", "survey", "2021-01-01_raw_bus_stop_census_responses.csv")) # Import Bus Stop Census Survey Responses
   
   # The following imports use the googlesheets4 package to import data from the Bus Stop Corrections Log.
   # You must have a Google Account to use the package as it will ask you to authorize the package to access your Google Sheets.
   # There is a limit on how many reads can be made through the Google Sheets API. 
   # Import Corrections Sheet
-  corrections_df <- read_sheet("https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing",
-                               sheet = "Corrections by Record ID",
-                               col_names = TRUE,
-                               col_types = "icccccc",
-                               na = "") 
+  corrections_df <- read_sheet(
+                         ss        = "https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing",
+                         sheet     = "Corrections by Record ID",
+                         col_names = TRUE,
+                         col_types = "icccccc",
+                         na        = ""
+                    ) 
   
   # Import Missing Question Data
-  missing_questions_populated_df <- read_sheet("https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing",
-                                    sheet = "Missing Question Records",
-                                    col_names = TRUE,
-                                    na = "") %>%
-                                    select(Record_ID, Sidewalk_New, Obstacles_New, Obstacle_Desc_New, Boarding_Area_New, Crosswalk_Features_New) # Selects only the fields that were filled in
+  missing_questions_populated_df <- read_sheet(
+                                          ss = "https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing",
+                                          sheet = "Missing Question Records",
+                                          col_names = TRUE,
+                                          na = "") %>%
+                                    select(Record_ID, Sidewalk_New, Obstacles_New, 
+                                           Obstacle_Desc_New, Boarding_Area_New, Crosswalk_Features_New) # Selects only the fields that were filled in
   
   # Import Duplicate Records By Stop ID and Fields Data
   duplicate_records_reconciled_df <- read_sheet("https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing",
@@ -41,13 +44,13 @@
                                             Wayfinding_Reconciled, Wayfinding_Accessibility_Reconciled, Sidewalk_Reconciled,
                                             Boarding_Area_Reconciled, Crosswalks_Reconciled, Crosswalk_Features_Reconciled)
   
-  ## INITIAL FIELD CLEANING -----------------------------------------------------------------------------------------------------
+  ###################### PERFORM INITIAL CLEANING TASKS TO PREPARE DATA FOR FURTHER PROCESSING ######################### 
   
   # Merge 'Another.HUGE.inconvenience' into 'Additional_Comments' field and remove | Data Cleaning Task #1
-  raw_df_clean <- raw_df %>% mutate(Additional_Comments = 
-                                      ifelse(is.na(Another.HUGE.inconvenience), Additional_Comments,
+  raw_df_clean <- raw_df %>% mutate(
+                                Additional_Comments = ifelse(is.na(Another.HUGE.inconvenience), Additional_Comments,
                                              paste(Additional_Comments, Another.HUGE.inconvenience, sep = " "))) %>% # Merge into Additional_Comments field if populated with text
-                             select(-Another.HUGE.inconvenience) # Remove field
+                             select(-Another.HUGE.inconvenience)
   
   # Clean Obstacle Column | Data Cleaning Tasks #2 & #3
   raw_df_clean <- raw_df_clean %>% mutate(Obstacle_Desc_Clean = ifelse(is.na(Obstacles), Obstacle_Desc,   # Create a new Obstacle_Desc field that populates with non Yes/No answers from Obstacle field            
@@ -59,35 +62,44 @@
                                    mutate(Obstacle_Desc = ifelse(is.na(Obstacle_Desc), "", Obstacle_Desc))
 
   # Remove trailing fields # Data Cleaning Task #4
-  raw_df_clean <- raw_df_clean %>% select(-Resent.From, -Curbside.Boarding, -To, -Date, -Subject, -Cc, -X.From) # Removes unneeded columns
+  raw_df_clean <- raw_df_clean %>% 
+                    select(-Resent.From, -Curbside.Boarding, -To, -Date, -Subject, -Cc, -X.From) # Removes unneeded columns
   
   # Replace NAs in fields to help with removing duplicates | Data Cleaning Task #5
-  raw_df_clean <- raw_df_clean %>% mutate(Email_Masked = replace_na(Email_Masked, ""),
-                                          Crosswalk_Features = replace_na(Crosswalk_Features, ""),
-                                          Additional_Comments = replace_na(Additional_Comments, ""))  #ifelse(!is.na(Timestamp), replace_na(Crosswalk_Features, ""), Crosswalk_Features))
+  raw_df_clean <- raw_df_clean %>% 
+                      mutate(Email_Masked        = replace_na(Email_Masked, ""),
+                             Crosswalk_Features  = replace_na(Crosswalk_Features, ""),
+                             Additional_Comments = replace_na(Additional_Comments, "")) 
   
   # Clean data of identical records | Data Cleaning Task #6
-  raw_df_clean_deduped <- raw_df_clean %>% distinct_at(vars(-Record_ID, -Timestamp), .keep_all = TRUE)
+  raw_df_clean_deduped <- raw_df_clean %>% 
+                              distinct_at(vars(-Record_ID, -Timestamp), .keep_all = TRUE)
   
   # Convert Timestamp To R Readable Format | Data Cleaning Task #7
   raw_df_clean_deduped$Timestamp_Sub <- substring(raw_df_clean_deduped$Timestamp, 0, 24) # Take substring of timestamp to reformat
   raw_df_clean_deduped$Timestamp_Sub <- as.POSIXct(raw_df_clean_deduped$Timestamp_Sub, format = "%a %b %d %Y %H:%M:%S") # Convert to POSIXct
-  raw_df_clean_deduped <- raw_df_clean_deduped %>% mutate(Timestamp = Timestamp_Sub) %>% # Set original timestamp value to converted timestamp
-                                                   select(-Timestamp_Sub) # Remove timestamp helper field created for the conversion
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                              mutate(Timestamp = Timestamp_Sub) %>% # Set original timestamp value to converted timestamp
+                              select(-Timestamp_Sub) # Remove timestamp helper field created for the conversion
   
 
-  ## INTEGRATE SURVEYOR SUBMITTED CORRECTIONS -----------------------------------------------------------------------------------
+  ######################### INTEGRATE SURVEYOR SUBMITTED CORRECTIONS #########################
   # Use correctRecords function to apply corrections to respose data | Data Cleaning Task #8
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Surveyor Submitted Correction")
   
   ## CLEAN STOP ID FIELD --------------------------------------------------------------------------------------------------------
-  raw_df_clean_deduped_gtfs_stops_join <- raw_df_clean_deduped %>% left_join(final_stop_list, # Join Survey Responses and GTFS Data
-                                                                             by = c("Stop_ID" = "stop_id")) 
+  raw_df_clean_deduped_gtfs_stops_join <- raw_df_clean_deduped %>% 
+                                              left_join(final_stop_list, by = c("Stop_ID" = "stop_id")) # Join Survey Responses and GTFS Data
+  
   no_stop_id_df <- raw_df_clean_deduped_gtfs_stops_join %>% dplyr::filter(is.na(Main_Street_or_Station),
                                                                           !grepl("streetcar", Routes.x, ignore.case = TRUE)) # Get list of Stop_IDs not in GTFS Data
   # write.csv(no_stop_id_df, here("data", "raw_data", "validation", "No Stop ID Survey Records.csv"), row.names = FALSE) # Export records for examination
   
-  raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "No Stop ID Record")
+  raw_df_clean_deduped <- correctRecords(
+                              survey_df      = raw_df_clean_deduped, 
+                              corrections_df = corrections_df, 
+                              source_sheet   = "No Stop ID Record"
+                          )
   
   ## FILL IN MISSING QUESTION DATA ----------------------------------------------------------------------------------------------
   # Create data.frame of records with missing data for Sidewalk, Obstacle, Obstacle_Desc, Boarding_Area, and Crosswalk_Features questions
@@ -105,7 +117,11 @@
                                                    select(-Sidewalk_New, -Obstacles_New, -Obstacle_Desc_New, -Boarding_Area_New, -Crosswalk_Features_New)
   
   # Apply corrections from the Missing Questions Data re-populating
-  raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Missing Question Records")
+  raw_df_clean_deduped <- correctRecords(
+                              survey_df      = raw_df_clean_deduped, 
+                              corrections_df = corrections_df, 
+                              source_sheet   = "Missing Question Records"
+                          )
   
   
   # Remove Duplicates of same record with different Cleanliness and Timestamp field entries
@@ -154,19 +170,19 @@
   # The following code block takes the manually inputted fields from the "Duplicate Records by Stop ID and Fields" sheet and assigns them to the
   # corresponding field in the original data set.
   raw_df_clean_deduped <- raw_df_clean_deduped %>% 
-                            left_join(duplicate_records_reconciled_df, by = c("Record_ID")) %>%
-                            mutate(Seating = ifelse(!is.na(Seating_Reconciled), Seating_Reconciled, Seating),
-                                   Shelter = ifelse(!is.na(Shelter_Reconciled), Shelter_Reconciled, Shelter),
-                                   Trash_Can = ifelse(!is.na(Trash_Can_Reconciled), Trash_Can_Reconciled, Trash_Can),
-                                   Wayfinding = ifelse(!is.na(Wayfinding_Reconciled), Wayfinding_Reconciled, Wayfinding),
-                                   Wayfinding_Accessibility = ifelse(!is.na(Wayfinding_Accessibility_Reconciled), Wayfinding_Accessibility_Reconciled, Wayfinding_Accessibility),
-                                   Sidewalk = ifelse(!is.na(Sidewalk_Reconciled), Sidewalk_Reconciled, Sidewalk),
-                                   Boarding_Area = ifelse(!is.na(Boarding_Area_Reconciled), Boarding_Area_Reconciled, Boarding_Area),
-                                   Crosswalks = ifelse(!is.na(Crosswalks_Reconciled), Crosswalks_Reconciled, Crosswalks),
-                                   Crosswalk_Features = ifelse(!is.na(Crosswalk_Features_Reconciled), Crosswalk_Features_Reconciled, Crosswalk_Features)) %>%
-                            select(-Seating_Reconciled, -Shelter_Reconciled, -Trash_Can_Reconciled,
-                                   -Wayfinding_Reconciled, -Wayfinding_Accessibility_Reconciled, -Sidewalk_Reconciled,
-                                   -Boarding_Area_Reconciled, -Crosswalks_Reconciled, -Crosswalk_Features_Reconciled)
+                              left_join(duplicate_records_reconciled_df, by = c("Record_ID")) %>%
+                              mutate(Seating = ifelse(!is.na(Seating_Reconciled), Seating_Reconciled, Seating),
+                                     Shelter = ifelse(!is.na(Shelter_Reconciled), Shelter_Reconciled, Shelter),
+                                     Trash_Can = ifelse(!is.na(Trash_Can_Reconciled), Trash_Can_Reconciled, Trash_Can),
+                                     Wayfinding = ifelse(!is.na(Wayfinding_Reconciled), Wayfinding_Reconciled, Wayfinding),
+                                     Wayfinding_Accessibility = ifelse(!is.na(Wayfinding_Accessibility_Reconciled), Wayfinding_Accessibility_Reconciled, Wayfinding_Accessibility),
+                                     Sidewalk = ifelse(!is.na(Sidewalk_Reconciled), Sidewalk_Reconciled, Sidewalk),
+                                     Boarding_Area = ifelse(!is.na(Boarding_Area_Reconciled), Boarding_Area_Reconciled, Boarding_Area),
+                                     Crosswalks = ifelse(!is.na(Crosswalks_Reconciled), Crosswalks_Reconciled, Crosswalks),
+                                     Crosswalk_Features = ifelse(!is.na(Crosswalk_Features_Reconciled), Crosswalk_Features_Reconciled, Crosswalk_Features)) %>%
+                              select(-Seating_Reconciled, -Shelter_Reconciled, -Trash_Can_Reconciled,
+                                     -Wayfinding_Reconciled, -Wayfinding_Accessibility_Reconciled, -Sidewalk_Reconciled,
+                                     -Boarding_Area_Reconciled, -Crosswalks_Reconciled, -Crosswalk_Features_Reconciled)
   
   # Apply corrections from the Duplicate Records by Stop ID and Fields reconciliation
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Duplicate Records") %>%
@@ -175,6 +191,8 @@
   # After running this code, the duplicates_by_fields data frame was rerun again to identify any more duplicates that are remaining after the reconciled
   # data and corrections were inputted. These duplicates were exported to their own file then copied into the "Duplicates by Stop ID" sheet
   # in the Bus Stop Census Corrections Workbook
+  
+  ###################### REMOVE DUPLICATES BY STOP ID AND SURVEYOR ######################### 
   
   # Identify Duplicate Records by Stop_ID and Surveyor
   surveyor_duplicates <- raw_df_clean_deduped %>% select(Stop_ID, Email_Masked) %>% 
@@ -195,41 +213,83 @@
   # Apply corrections from the Duplicate Records by Stop ID and Surveyor reconciliation
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Surveyor Duplicate Records")
   
-  # Separate Question Fields With Multiple Answers Into One Field Per Answer
-  raw_df_clean_deduped <- raw_df_clean_deduped %>% mutate(Litter = ifelse(grepl("Litter at the stop", Cleanliness, fixed = TRUE), "Yes", "No"),
-                                                          Grafitti = ifelse(grepl("Graffiti (unauthorized) or tagging on bus stop amenities",Cleanliness, fixed = TRUE), "Yes", "No"),
-                                                          Overflow = ifelse(grepl("Overflowing or poorly maintained trash can", Cleanliness, fixed = TRUE), "Yes","No"),
-                                                          Dirty_Seating = ifelse(grepl("Dirty seating area", Cleanliness, fixed = TRUE), "Yes", "No"),
-                                                          Other = ifelse(grepl("Other", Cleanliness, fixed = TRUE), "Yes", "No")) %>%
-                                                   mutate(Route_Number = ifelse(grepl("Route Numbers", Wayfinding, fixed = TRUE), "Yes", "No"),
-                                                          Route_Schedule = ifelse(grepl("Route Schedule", Wayfinding, fixed = TRUE), "Yes", "No"),
-                                                          Route_Map = ifelse(grepl("Route Map", Wayfinding, fixed = TRUE), "Yes","No"),
-                                                          Customer_Service = ifelse(grepl("Customer Service Information", Wayfinding, fixed = TRUE), "Yes", "No"),
-                                                          None_Of_The_Above = ifelse(grepl("None of the Above", Wayfinding, fixed = TRUE), "Yes", "No")) %>%
-                                                   mutate(Main_Street_Crosswalk = ifelse(grepl("Yes, on the main street", Crosswalks, fixed = TRUE), "Yes", "No"),
-                                                          Cross_Street_crosswalk = ifelse(grepl("Yes, on the cross street",Crosswalks, fixed = TRUE), "Yes", "No"),
-                                                          Worn_Faded = ifelse(grepl("Yes, and crosswalk paint is faded or worn away", Crosswalks, fixed = TRUE), "Yes","No"),
-                                                          No_Crosswalk = ifelse(grepl("No, no painted crosswalk within 100 feet", Crosswalks, fixed = TRUE), "Yes", "No")) %>%
-                                                   mutate(Traffic_Light = ifelse(grepl("Traffic_Light", Crosswalk_Features, fixed = TRUE), "Yes", "No"),
-                                                          Curb_Cuts = ifelse(grepl("Curb cuts for wheelchairs",Crosswalk_Features, fixed = TRUE), "Yes", "No"),
-                                                          Crosswalk_Signals = ifelse(grepl("Crosswalk signals with push buttons", Crosswalk_Features, fixed = TRUE), "Yes","No"),
-                                                          Crossing_Audio = ifelse(grepl("Crossing audio overlays for the visually impaired", Crosswalk_Features, fixed = TRUE), "Yes", "No"),
-                                                          Tactile_Guide = ifelse(grepl("Tactile guide strips for the visually impaired", Crosswalk_Features, fixed = TRUE), "Yes", "No")) %>%
-                                                   mutate(Informal_Pathways = ifelse(grepl("Pedestrians using informal pathways where sidewalks do not exist", Behavior, fixed = TRUE), "Yes", "No"),
-                                                          Compete_For_Seat = ifelse(grepl("Pedestrians competing for seating at the bus stop",Behavior, fixed = TRUE), "Yes", "No"),
-                                                          Cross_Midblock = ifelse(grepl("Pedestrians crossing the roadway at midblock locations", Behavior, fixed = TRUE), "Yes","No"),
-                                                          Catch_The_Bus = ifelse(grepl("Pedestrians running across roadways to catch the bus", Behavior, fixed = TRUE), "Yes", "No"),
-                                                          Dangerous_Motorists = ifelse(grepl("Dangerous motorist behavior around bus stop (i.e. speeding or not yielding to pedestrians)", Behavior, fixed = TRUE), "Yes", "No"),
-                                                          First_Visit = ifelse(grepl("None of the above (first visit to this stop)", Behavior, fixed = TRUE), "Yes", "No"),
-                                                          Regular_User_None = ifelse(grepl("None of the above (occasional or frequent user of this stop", Behavior, fixed = TRUE), "Yes", "No")) %>%
-                                                    select(Record_ID, Stop_ID, Timestamp, Email_Masked, Main_Street, Nearest_Landmark, Routes, Direction,
-                                                           Seating, Shelter, Trash_Can, Litter, Grafitti, Overflow, Dirty_Seating, Other, Line_of_Sight,
-                                                           Route_Number, Route_Schedule, Route_Map, Customer_Service, None_Of_The_Above, Wayfinding_Accessibility,
-                                                           Lighting, Main_Street_Crosswalk, Cross_Street_Crosswalk, Worn_Faded, No_Crosswalk, Obstacles, Obstacle_Desc, Boarding_Area,
-                                                           Crosswalks, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, Informal_Pathways,
-                                                           Compete_For_Seat, Cross_Midblock, Catch_The_Bus, Dangerous_Motorists, First_Visit, Regular_User_None,
-                                                           On_Site_Survey, Additional_Comments)
+  ###################### SPREAD DATA FOR SELECT ALL THAT APPLY RESPONSES ######################### 
   
+  # Separate Select All That Apply Question Fields With Multiple Answers Into One Field Per Answer
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                              mutate(Litter = ifelse(grepl("Litter at the stop", Cleanliness, fixed = TRUE), "Yes", "No"),
+                                     Grafitti = ifelse(grepl("Graffiti (unauthorized) or tagging on bus stop amenities",Cleanliness, fixed = TRUE), "Yes", "No"),
+                                     Overflow = ifelse(grepl("Overflowing or poorly maintained trash can", Cleanliness, fixed = TRUE), "Yes","No"),
+                                     Dirty_Seating = ifelse(grepl("Dirty seating area", Cleanliness, fixed = TRUE), "Yes", "No"),
+                                     Other = ifelse(grepl("Other", Cleanliness, fixed = TRUE), "Yes", "No")) %>%
+                              mutate(Route_Number = ifelse(grepl("Route Numbers", Wayfinding, fixed = TRUE), "Yes", "No"),
+                                     Route_Schedule = ifelse(grepl("Route Schedule", Wayfinding, fixed = TRUE), "Yes", "No"),
+                                     Route_Map = ifelse(grepl("Route Map", Wayfinding, fixed = TRUE), "Yes","No"),
+                                     Customer_Service = ifelse(grepl("Customer Service Information", Wayfinding, fixed = TRUE), "Yes", "No"),
+                                     None_Of_The_Above = ifelse(grepl("None of the Above", Wayfinding, fixed = TRUE), "Yes", "No")) %>%
+                              mutate(Main_Street_Crosswalk = ifelse(grepl("Yes, on the main street", Crosswalks, fixed = TRUE), "Yes", "No"),
+                                     Cross_Street_Crosswalk = ifelse(grepl("Yes, on the cross street",Crosswalks, fixed = TRUE), "Yes", "No"),
+                                     Worn_Faded = ifelse(grepl("Yes, and crosswalk paint is faded or worn away", Crosswalks, fixed = TRUE), "Yes","No"),
+                                     No_Crosswalk = ifelse(grepl("No, no painted crosswalk within 100 feet", Crosswalks, fixed = TRUE), "Yes", "No")) %>%
+                              mutate(Traffic_Light = ifelse(grepl("Traffic_Light", Crosswalk_Features, fixed = TRUE), "Yes", "No"),
+                                     Curb_Cuts = ifelse(grepl("Curb cuts for wheelchairs",Crosswalk_Features, fixed = TRUE), "Yes", "No"),
+                                     Crosswalk_Signals = ifelse(grepl("Crosswalk signals with push buttons", Crosswalk_Features, fixed = TRUE), "Yes","No"),
+                                     Crossing_Audio = ifelse(grepl("Crossing audio overlays for the visually impaired", Crosswalk_Features, fixed = TRUE), "Yes", "No"),
+                                     Tactile_Guide = ifelse(grepl("Tactile guide strips for the visually impaired", Crosswalk_Features, fixed = TRUE), "Yes", "No")) %>%
+                              mutate(Informal_Pathways = ifelse(grepl("Pedestrians using informal pathways where sidewalks do not exist", Behavior, fixed = TRUE), "Yes", "No"),
+                                     Compete_For_Seat = ifelse(grepl("Pedestrians competing for seating at the bus stop",Behavior, fixed = TRUE), "Yes", "No"),
+                                     Cross_Midblock = ifelse(grepl("Pedestrians crossing the roadway at midblock locations", Behavior, fixed = TRUE), "Yes","No"),
+                                     Catch_The_Bus = ifelse(grepl("Pedestrians running across roadways to catch the bus", Behavior, fixed = TRUE), "Yes", "No"),
+                                     Dangerous_Motorists = ifelse(grepl("Dangerous motorist behavior around bus stop (i.e. speeding or not yielding to pedestrians)", Behavior, fixed = TRUE), "Yes", "No"),
+                                     First_Visit = ifelse(grepl("None of the above (first visit to this stop)", Behavior, fixed = TRUE), "Yes", "No"),
+                                     Regular_User_None = ifelse(grepl("None of the above (occasional or frequent user of this stop", Behavior, fixed = TRUE), "Yes", "No")) %>%
+                              select(Record_ID, Stop_ID, Timestamp, Email_Masked, Main_Street, Nearest_Landmark, Routes, Direction,
+                                     Seating, Shelter, Trash_Can, Litter, Grafitti, Overflow, Dirty_Seating, Other, Line_of_Sight,
+                                     Route_Number, Route_Schedule, Route_Map, Customer_Service, None_Of_The_Above, Wayfinding_Accessibility,
+                                     Lighting, Sidewalk, Obstacles, Obstacle_Desc, Boarding_Area, Main_Street_Crosswalk, Cross_Street_Crosswalk, 
+                                     Worn_Faded, No_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, Informal_Pathways,
+                                     Compete_For_Seat, Cross_Midblock, Catch_The_Bus, Dangerous_Motorists, First_Visit, Regular_User_None,
+                                     On_Site_Survey, Additional_Comments)
+  
+  ###################### SPREAD DATA FOR SELECT ALL THAT APPLY RESPONSES ######################### 
+  
+  # Clean Trash_Can and Overflow Contradictory Answers
+  trash_can_verification <- raw_df_clean_deduped %>% 
+                                mutate(Flag = ifelse(Trash_Can == "No" & Overflow == "Yes", "FLAG", "")) %>%
+                                dplyr::filter(Flag == "FLAG")
+  #write.csv(trash_can_verification, here("data", "raw_data", "validation", "Trash_Can and Overflow Responses.csv"), row.names = FALSE)
+  
+  # Identify and Export Records where the surveyor selected one or more wayfinding information present and in Wayfinding Accessibility selected "No, no wayfinding information present"
+  wayfinding_verification <- raw_df_clean_deduped %>%
+    mutate(Flag = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") > 0 &
+                           Wayfinding_Accessibility == "No wayfinding information present",
+                         "FLAG", "")) %>%
+    dplyr::filter(Flag == "FLAG")
+  write.csv(wayfinding_verification, here("data", "raw_data", "validation", "Crosswalk and No Crosswalk Responses.csv"), row.names = FALSE)
+  
+  # Identify and Export Records where the options for Main Street, Cross Street, or Worn or Faded Crosswalk are selected along with the "No, there is no crosswalk within 100 feet" selection 
+  crosswalk_verification_pt_one <- raw_df_clean_deduped %>% 
+                                    mutate(Flag = ifelse(str_count(paste(Main_Street_Crosswalk, Cross_Street_Crosswalk,  Worn_Faded, sep = ""), "Yes") > 0 & No_Crosswalk == "Yes",
+                                                         "FLAG", "")) %>%
+                                    dplyr::filter(Flag == "FLAG")
+  #write.csv(crosswalk_verification_pt_one, here("data", "raw_data", "validation", "Crosswalk and No Crosswalk Responses.csv"), row.names = FALSE)
+  
+  # Identify and Export Records where the surveyor only checked "Yes, and the crosswalk paint is worn or faded"
+  crosswalk_verification_pt_two <- raw_df_clean_deduped %>% 
+                                    mutate(Flag = ifelse(str_count(paste(Main_Street_Crosswalk, Cross_Street_Crosswalk, Worn_Faded, sep = ""), "Yes") == 1 & Worn_Faded == "Yes", "FLAG", "")) %>%
+                                    dplyr::filter(Flag == "FLAG")
+  #write.csv(crosswalk_verification_pt_two, here("data", "raw_data", "validation", "Only Worn or Faded Crosswalk Response.csv"), row.names = FALSE)
+  
+  
+  
+  ###################### DATA MODIFICATIONS BASED ON MARTA ARMY ASSUMPTIONS #########################
+  
+  # Clean Contradictory Behavior Answers
+  behavior_verification <- raw_df_clean_deduped %>% mutate(Flag = ifelse((First_Visit == "Yes" | Regular_User_None == "Yes") &  
+                                                                             (Informal_Pathways == "Yes" | Compete_For_Seat == "Yes" |
+                                                                                Cross_Midblock == "Yes" | Catch_The_Bus == "Yes" |
+                                                                                Dangerous_Motorists == "Yes"), "FLAG", "")) %>%
+                                                    dplyr::filter(Flag == "FLAG")
   
   # Clean Wayfinding Field
   'Because nearly all MARTA bus stop markers have the Customer Service Number print on them, we have made the decision to replace all responses
@@ -246,21 +306,13 @@
                                                                                               Route_Map == "No" & Customer_Service == "Yes",
                                                                                             "No wayfinding information present", Wayfinding_Accessibility))
   
-  # Clean Crosswalk Field
-  crosswalk_verification <- raw_df_clean_deduped %>% mutate(Error = ifelse(str_count(paste(Main_Street, Cross_Street,  Worn_Faded, sep = ""), "Yes") > 0 & No_Crosswalk == "Yes", "FLAG", ""),
-                                                            Error_2 = ifelse(str_count(paste(Main_Street, Cross_Street, Worn_Faded, sep = ""), "Yes") == 1 & Worn_Faded == "Yes", "FLAG", ""))
-  
-  # Contradictory Behavior Answers
-  behavior_verification <- raw_df_clean_deduped %>% mutate(Verify = ifelse((Firsit_Visit == "Yes" | Regular_User_None == "Yes") &  Cross_Street + Worn_Faded) > 0 & No_Crosswalk == 1, 1, 0))
-  
-  
   'The second mutate normalizes the Main_Street and Nearest_Landmark names by setting the fields equal to the stop name listed in the GTFS data.'
   dplyr::filter(!is.na(main_street_or_station)) %>% #Remove remaining records from response data without a Stop ID.
     mutate(Main_Street = main_street_or_station, # Normalize Main_Street field using GTFS stop name
            Nearest_Landmark = cross_street) %>% # Normalize Nearest_Landmark field using GTFS stop name
     select(-main_street_or_station, -cross_street) # Remove helper columns
   
-  #Data Output
+  ###################### EXPORT CLEANED DATA ###################### 
   # write.csv(, file = here("data", "tidy_data", "pre_processed_survey_df.csv"))
   
             
