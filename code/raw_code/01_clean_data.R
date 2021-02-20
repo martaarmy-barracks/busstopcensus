@@ -84,7 +84,7 @@
   
 
   ######################### INTEGRATE SURVEYOR SUBMITTED CORRECTIONS #########################
-  # Use correctRecords function to apply corrections to respose data | Data Cleaning Task #8
+  # Use correctRecords function to apply corrections to response data | Data Cleaning Task #8
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Surveyor Submitted Correction")
   
   ## CLEAN STOP ID FIELD --------------------------------------------------------------------------------------------------------
@@ -261,11 +261,11 @@
   
   # Identify and Export Records where the surveyor selected one or more wayfinding information present and in Wayfinding Accessibility selected "No, no wayfinding information present"
   wayfinding_verification <- raw_df_clean_deduped %>%
-    mutate(Flag = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") > 0 &
-                           Wayfinding_Accessibility == "No wayfinding information present",
-                         "FLAG", "")) %>%
-    dplyr::filter(Flag == "FLAG")
-  write.csv(wayfinding_verification, here("data", "raw_data", "validation", "Crosswalk and No Crosswalk Responses.csv"), row.names = FALSE)
+                                mutate(Flag = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") > 0 &
+                                                     Wayfinding_Accessibility == "No wayfinding information present",
+                                                   "FLAG", "")) %>%
+                                dplyr::filter(Flag == "FLAG")
+  #write.csv(wayfinding_verification, here("data", "raw_data", "validation", "Wayfinding and No Wayfinding Responses.csv"), row.names = FALSE)
   
   # Identify and Export Records where the options for Main Street, Cross Street, or Worn or Faded Crosswalk are selected along with the "No, there is no crosswalk within 100 feet" selection 
   crosswalk_verification_pt_one <- raw_df_clean_deduped %>% 
@@ -280,39 +280,56 @@
                                     dplyr::filter(Flag == "FLAG")
   #write.csv(crosswalk_verification_pt_two, here("data", "raw_data", "validation", "Only Worn or Faded Crosswalk Response.csv"), row.names = FALSE)
   
+  # Identify and Export Records where the surveyor checked "No, there is no seating" and checked "Dirty Seating Area" as a cleanliness issue
+  seating_verification <- raw_df_clean_deduped %>%
+                              mutate(Flag = ifelse(Seating == "No, there is no seating" & Dirty_Seating == "Yes", "FLAG", "")) %>%
+                              dplyr::filter(Flag == "FLAG")
+  #write.csv(seating_verification, here("data", "raw_data", "validation", "No Seating and Dirty Seating Response.csv"), row.names = FALSE)
   
+  
+  # Apply Contradictory Answer Corrections to Records
+  raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Contradictory Responses")
   
   ###################### DATA MODIFICATIONS BASED ON MARTA ARMY ASSUMPTIONS #########################
   
   # Clean Contradictory Behavior Answers
-  behavior_verification <- raw_df_clean_deduped %>% mutate(Flag = ifelse((First_Visit == "Yes" | Regular_User_None == "Yes") &  
-                                                                             (Informal_Pathways == "Yes" | Compete_For_Seat == "Yes" |
-                                                                                Cross_Midblock == "Yes" | Catch_The_Bus == "Yes" |
-                                                                                Dangerous_Motorists == "Yes"), "FLAG", "")) %>%
-                                                    dplyr::filter(Flag == "FLAG")
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                              mutate(First_Visit       = ifelse(First_Visit         == "Yes"  &  
+                                                               (Informal_Pathways   == "Yes" | 
+                                                                Compete_For_Seat    == "Yes" |
+                                                                Cross_Midblock      == "Yes" | 
+                                                                Catch_The_Bus       == "Yes" |
+                                                                Dangerous_Motorists == "Yes"), "No", ""),
+                                     Regular_User_None = ifelse(Regular_User_None   == "Yes"  &  
+                                                               (Informal_Pathways   == "Yes" | 
+                                                                Compete_For_Seat    == "Yes" |
+                                                                Cross_Midblock      == "Yes" | 
+                                                                Catch_The_Bus       == "Yes" |
+                                                                Dangerous_Motorists == "Yes"), "No", ""))
   
   # Clean Wayfinding Field
-  'Because nearly all MARTA bus stop markers have the Customer Service Number print on them, we have made the decision to replace all responses
+  'Because all MARTA bus stop markers have the Customer Service Number print on them, we have made the decision to replace all responses
   with "None of the above" to "Customer Service Information"'
-  raw_df_clean_deduped <- raw_df_clean_deduped %>% mutate(None_Of_The_Above = ifelse((Route_Number == "Yes" | Route_Schedule == "Yes" |
-                                                                                     Route_Map == "Yes" | Customer_Service == "Yes") &
-                                                                                     None_Of_The_Above == "Yes", "No", "Yes"),
-                                                          Customer_Service = "Yes",
-                                                          None_Of_The_Above = "No")
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                              mutate(None_Of_The_Above = 
+                                       ifelse((Route_Number == "Yes" | Route_Schedule == "Yes" |
+                                               Route_Map == "Yes" | Customer_Service == "Yes") &
+                                               None_Of_The_Above == "Yes", "No", "Yes"),
+                                      Customer_Service = "Yes",
+                                      None_Of_The_Above = "No")
   
   
   # Clean Wayfinding Accessibility Field
-  raw_df_clean_deduped <- raw_df_clean_deduped %>% mutate(Wayfinding_Accessibility = ifelse(Route_Number == "No" & Route_Schedule == "No" &
-                                                                                              Route_Map == "No" & Customer_Service == "Yes",
-                                                                                            "No wayfinding information present", Wayfinding_Accessibility))
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                              mutate(Wayfinding_Accessibility = 
+                                       ifelse(Route_Number == "No" & Route_Schedule == "No" & Route_Map == "No" & Customer_Service == "Yes",
+                                              "No wayfinding information present", Wayfinding_Accessibility))
   
-  'The second mutate normalizes the Main_Street and Nearest_Landmark names by setting the fields equal to the stop name listed in the GTFS data.'
-  dplyr::filter(!is.na(main_street_or_station)) %>% #Remove remaining records from response data without a Stop ID.
-    mutate(Main_Street = main_street_or_station, # Normalize Main_Street field using GTFS stop name
-           Nearest_Landmark = cross_street) %>% # Normalize Nearest_Landmark field using GTFS stop name
-    select(-main_street_or_station, -cross_street) # Remove helper columns
+  # {Code to update shelter wayfinding accessibility answers to "No" to go here}
+ 
+  # {Code to Update Main Street and Nearest Landmark to Go Here}
   
   ###################### EXPORT CLEANED DATA ###################### 
-  # write.csv(, file = here("data", "tidy_data", "pre_processed_survey_df.csv"))
+  # write.csv(raw_df_clean_deduped, file = here("data", "tidy_data", "pre_processed_survey_df.csv"))
   
             

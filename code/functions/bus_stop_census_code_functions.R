@@ -1,8 +1,8 @@
+  # This script contains functions used in the Bus Stop Census Code
 
+  # The correctRecords functions applies corrections specified in the Bus Stop Census Corrections Log, located here,
+  # https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing, to the raw data.
   correctRecords <- function(survey_df, corrections_df, source_sheet) {
-    # The correctRecords functions applies corrections specified in the Bus Stop Census Corrections Log, located here,
-    # https://docs.google.com/spreadsheets/d/1n8RErNhOXrNptVyul5rTuE-ZTdSzkljB0cCAV8hBJkw/edit?usp=sharing,
-    # to the raw data.
     corrections_subset <- subset(corrections_df, Correction_Source_Sheet == source_sheet) # Subset corrections data based on the sheet the corrections originated from
     print("subsetted") # Print command showing the corrections data has been subsetted
     for (row in 1:nrow(corrections_subset)) {
@@ -82,7 +82,7 @@
                                                     with(.,case_when((route_type == 3) ~ "Bus",
                                                                      (route_type == 1) ~ "Rail")))
     
-    # Format Stop Times To be 24 hour
+    # Convert stop hours that are into the next day to regular clock hours (e.g. 25:12:05 becomes 01:12:05)
     stop_times$arrival_time_adj <- ifelse(substr(stop_times$arrival_time,1,2) == "24",
                                                    sub("24","00",stop_times$arrival),
                                                    ifelse(substr(stop_times$arrival_time,1,2) == "25",
