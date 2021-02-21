@@ -3,8 +3,8 @@
   library(maps)
   library(maptools)
 
-  ## IMPORT DATA ################################################################################################################
-  raw_df <- read.csv(here("products", "NPU-Z", "SRG Survey Responses.csv"))
+  ######################### IMPORT DATA ######################### 
+  raw_df <- read.csv(here("data", "tidy_data", "pre_processed_survey_df.csv"))
 
   ## IMPORT Subset
   survey_df <- raw_df %>% rename(Stop_ID = stopid,
@@ -43,10 +43,11 @@
   
   survey_df$Stop_ID <- as.character(survey_df$Stop_ID)
   
+  survey_df <- raw_df_clean_deduped
+  
   ## ANALYSIS ###################################################################################################################
   # Seating
   seating <- survey_df %>% distinct(Stop_ID, Seating) %>%
-    dplyr::filter(!is.na(Seating)) %>%
     group_by(Seating) %>%
     summarize(Count = n()) %>%
     mutate(Percent_Total = format(Count / sum(Count), digits = 2))
@@ -70,51 +71,41 @@
   seating_map 
   
   # Shelter
-  shelter <- survey_df %>% distinct(Stop_ID, Shelter) %>%
-    dplyr::filter(!is.na(Shelter)) %>%
+  shelter <- survey_df %>% 
+    distinct(Stop_ID, Shelter) %>%
     group_by(Shelter) %>%
     summarize(Count = n()) %>%
     mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   # Trash Can
-  trash_can <- survey_df %>% distinct(Stop_ID, Trash_Can) %>%
-    dplyr::filter(!is.na(Trash_Can)) %>%
+  trash_can <- survey_df %>% 
+    distinct(Stop_ID, Trash_Can) %>%
     group_by(Trash_Can) %>%
     summarize(Count = n()) %>%
     mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   ## Cleanliness
-  cleanliness <- survey_df %>% distinct(Stop_ID, Cleanliness) %>%
-    dplyr::filter(!is.na(Cleanliness)) %>%
-    mutate(Litter = ifelse(grepl("Litter at the stop", Cleanliness, fixed = TRUE), 1, 0),
-           Grafitti = ifelse(grepl("Graffiti (unauthorized) or tagging on bus stop amenities",Cleanliness, fixed = TRUE), 1, 0),
-           Overflow = ifelse(grepl("Overflowing or poorly maintained trash can", Cleanliness, fixed = TRUE), 1,0),
-           Dirty_Seating = ifelse(grepl("Dirty seating area", Cleanliness, fixed = TRUE), 1, 0),
-           Other = ifelse(grepl("Other", Cleanliness, fixed = TRUE), 1, 0),
-           Stop_Counter = 1)
-  
-  
-  cleanliness_summary <- cleanliness %>% select(Litter, Grafitti, Overflow, Dirty_Seating, Other, Stop_Counter) %>%
-    summarize(Litter = sum(Litter),
-              Grafitti = sum(Grafitti),
-              Overflow = sum(Overflow),
-              Dirty_Seating = sum(Dirty_Seating),
-              Other = sum(Other),
-              Total_Stops = sum(Stop_Counter)) %>%
-    gather("Cleanliness_Issue", "Count", -Total_Stops) %>%
-    mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
-    select(Cleanliness_Issue, Count, Percent_Total)
+  cleanliness_summary <- survey_df %>% 
+                          select(Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
+                          summarize(Litter = sum(Litter == "Yes"),
+                                    Grafitti = sum(Grafitti == "Yes"),
+                                    Overflow = sum(Overflow == "Yes"),
+                                    Dirty_Seating = sum(Dirty_Seating == "Yes"),
+                                    Other = sum(Other == "Yes"),
+                                    Total_Stops = n()) %>%
+                          gather("Cleanliness_Issue", "Count", -Total_Stops) %>%
+                          mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
+                          select(Cleanliness_Issue, Count, Percent_Total)
   
   ## Line of Sight
-  line_of_sight <- srg_survey_df %>% distinct(Stop_ID, Line_of_Sight) %>%
-    dplyr::filter(!is.na(Line_of_Sight)) %>%
+  line_of_sight <- survey_df %>% 
+    distinct(Stop_ID, Line_of_Sight) %>%
     group_by(Line_of_Sight) %>%
     summarize(Count = n()) %>%
     mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   ## Wayfinding
-  wayfinding <- srg_survey_df %>% distinct(Stop_ID, Wayfinding) %>%
-    dplyr::filter(!is.na(Wayfinding)) %>%
+  wayfinding <- survey_df %>% distinct(Stop_ID, Wayfinding) %>%
     mutate(Route_Number = ifelse(grepl("Route Numbers", Wayfinding, fixed = TRUE), 1, 0),
            Route_Schedule = ifelse(grepl("Route Schedule", Wayfinding, fixed = TRUE), 1, 0),
            Route_Map = ifelse(grepl("Route Map", Wayfinding, fixed = TRUE), 1,0),
@@ -129,17 +120,18 @@
            Customer_Service_Only = ifelse(Route_Number + Route_Schedule + Route_Map == 0 & Customer_Service == 1, 1, 0),
            No_Wayfinding = ifelse(Route_Number + Route_Schedule + Route_Map == 0 & Customer_Service == 0, 1, 0))
   
-  wayfinding_summary <- wayfinding %>% select(Route_Number, Route_Schedule, Route_Map,
-                                              Customer_Service, None_Of_The_Above,Stop_Counter) %>%
-    summarize(Route_Number = sum(Route_Number),
-              Route_Schedule = sum(Route_Schedule),
-              Route_Map = sum(Route_Map),
-              Customer_Service = sum(Customer_Service),
-              None_Of_The_Above = sum(None_Of_The_Above),
-              Total_Stops = sum(Stop_Counter)) %>%
-    gather("Wayfinding_Option", "Count", -Total_Stops) %>%
-    mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
-    select(Wayfinding_Option, Count, Percent_Total)
+  wayfinding_summary <- survey_df %>% 
+                            select(Route_Number, Route_Schedule, Route_Map,
+                                   Customer_Service, None_Of_The_Above) %>%
+                            summarize(Route_Number = sum(Route_Number == "Yes"),
+                                      Route_Schedule = sum(Route_Schedule == "Yes"),
+                                      Route_Map = sum(Route_Map == "Yes"),
+                                      Customer_Service = sum(Customer_Service == "Yes"),
+                                      None_Of_The_Above = sum(None_Of_The_Above == "Yes"),
+                                      Total_Stops = n()) %>%
+                            gather("Wayfinding_Option", "Count", -Total_Stops) %>%
+                            mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
+                            select(Wayfinding_Option, Count, Percent_Total)
   
   wayfinding_summary_comb <- wayfinding %>% select(Some_Route_Info_Only, Some_Route_Info_And_Cust_Serv, All_Route_Info_Only,
                                                    All_Route_Info_And_Cust_Serv, Customer_Service_Only, No_Wayfinding) %>%
@@ -152,25 +144,25 @@
     gather("Wayfinding Type", "Count")
   
   ## Wayfinding Accessibility
-  wayfinding_accessibility <- srg_survey_df %>% distinct(Stop_ID, Wayfinding_Accessibility) %>%
-    dplyr::filter(!is.na(Wayfinding_Accessibility)) %>%
-    group_by(Wayfinding_Accessibility) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  wayfinding_accessibility <- survey_df %>% 
+                                  distinct(Stop_ID, Wayfinding_Accessibility) %>%
+                                  group_by(Wayfinding_Accessibility) %>%
+                                  summarize(Count = n()) %>%
+                                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   ## Lighting
-  lighting <- srg_survey_df %>% distinct(Stop_ID, Lighting) %>%
-    dplyr::filter(!is.na(Lighting)) %>%
-    group_by(Lighting) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  lighting <- survey_df %>% 
+                  distinct(Stop_ID, Lighting) %>%
+                  group_by(Lighting) %>%
+                  summarize(Count = n()) %>%
+                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   ## Sidewalks
-  sidewalk <- survey_df %>% distinct(Stop_ID, Sidewalk) %>%
-    dplyr::filter(!is.na(Sidewalk)) %>%
-    group_by(Sidewalk) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  sidewalk <- survey_df %>% 
+                  distinct(Stop_ID, Sidewalk) %>%
+                  group_by(Sidewalk) %>%
+                  summarize(Count = n()) %>%
+                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   sidewalk_coord <- survey_df %>% distinct(Stop_ID, Sidewalk) %>%
     dplyr::filter(!is.na(Sidewalk)) %>%
@@ -202,11 +194,11 @@
   write.csv(obstacles_description, file = "Bus Stop Census Obstacle Descriptions.csv") 
   
   ## Boarding Areas
-  boarding <- survey_df %>% distinct(Stop_ID, Boarding_Area) %>%
-    dplyr::filter(!is.na(Boarding_Area)) %>%
-    group_by(Boarding_Area) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  boarding <- survey_df %>% 
+                  distinct(Stop_ID, Boarding_Area) %>%
+                  group_by(Boarding_Area) %>%
+                  summarize(Count = n()) %>%
+                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
   
   boarding_coord <- survey_df %>% distinct(Stop_ID, Boarding_Area) %>%
     dplyr::filter(!is.na(Boarding_Area) & (Boarding_Area == "Concrete sidewalk" | Boarding_Area == "Grass or dirt")) %>%
