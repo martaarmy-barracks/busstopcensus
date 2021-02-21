@@ -87,12 +87,15 @@
   # Use correctRecords function to apply corrections to response data | Data Cleaning Task #8
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Surveyor Submitted Correction")
   
-  ## CLEAN STOP ID FIELD --------------------------------------------------------------------------------------------------------
+  ######################### CHECK FOR VALID STOP ID ######################### 
+  # Not all surveys contained a Stop ID that was listed in the GTFS data. This code identifies those stops and 
+  # exports them to a csv for further review | Data Cleaning Task #9
+  
   raw_df_clean_deduped_gtfs_stops_join <- raw_df_clean_deduped %>% 
                                               left_join(final_stop_list, by = c("Stop_ID" = "stop_id")) # Join Survey Responses and GTFS Data
   
-  no_stop_id_df <- raw_df_clean_deduped_gtfs_stops_join %>% dplyr::filter(is.na(Main_Street_or_Station),
-                                                                          !grepl("streetcar", Routes.x, ignore.case = TRUE)) # Get list of Stop_IDs not in GTFS Data
+  no_stop_id_df <- raw_df_clean_deduped_gtfs_stops_join %>% 
+                     dplyr::filter(is.na(Main_Street_or_Station), !grepl("streetcar", Routes.x, ignore.case = TRUE)) # Get list of Stop_IDs not in GTFS Data
   # write.csv(no_stop_id_df, here("data", "raw_data", "validation", "No Stop ID Survey Records.csv"), row.names = FALSE) # Export records for examination
   
   raw_df_clean_deduped <- correctRecords(
@@ -101,20 +104,26 @@
                               source_sheet   = "No Stop ID Record"
                           )
   
-  ## FILL IN MISSING QUESTION DATA ----------------------------------------------------------------------------------------------
+  ######################### FILL IN MISSING QUESTION DATA #########################
+  # Questions corresponding to Sidewalk, Obstacle, Obstacles_Desc, Boarding_Area, and Crosswalk_Features were added shortly after
+  # the Bus Stop Census survey was launched. This resulted in over 100 surveys being submitted without answers for these fields.
+  # The following code identifies these records and exports them to a csv for the answers to be filled in. | Data Cleaning Task #10
+  
   # Create data.frame of records with missing data for Sidewalk, Obstacle, Obstacle_Desc, Boarding_Area, and Crosswalk_Features questions
   'Apporximately XX days after the start of data collection, four new questions were added:
   '
-  missing_questions_df <- raw_df_clean_deduped %>% dplyr::filter(is.na(Obstacles)) # Filter for all records where Obstacle question is NULL (this means this response was before the question was created and required)
+  missing_questions_df <- raw_df_clean_deduped %>% 
+                            dplyr::filter(is.na(Obstacles)) # Filter for all records where Obstacle question is NULL (this means this response was before the question was created and required)
   #write.csv(missing_questions_df, here("data", "raw_data", "validation", "Missing Question Data Records.csv"), row.names = FALSE) # Export missing data records for MARTA Army team to populate
   
-  raw_df_clean_deduped <- raw_df_clean_deduped %>% left_join(missing_questions_populated_df, by = c("Record_ID")) %>%
-                                                   mutate(Sidewalk = ifelse(!is.na(Sidewalk_New), Sidewalk_New, Sidewalk),
-                                                          Obstacles = ifelse(!is.na(Obstacles_New), Obstacles_New, Obstacles),
-                                                          Obstacle_Desc = ifelse(!is.na(Obstacle_Desc_New), Obstacle_Desc_New, Obstacle_Desc),
-                                                          Boarding_Area = ifelse(!is.na(Boarding_Area_New), Boarding_Area_New, Boarding_Area),
-                                                          Crosswalk_Features = ifelse(!is.na(Crosswalk_Features_New), Crosswalk_Features_New, Crosswalk_Features)) %>%
-                                                   select(-Sidewalk_New, -Obstacles_New, -Obstacle_Desc_New, -Boarding_Area_New, -Crosswalk_Features_New)
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                            left_join(missing_questions_populated_df, by = c("Record_ID")) %>%
+                            mutate(Sidewalk = ifelse(!is.na(Sidewalk_New), Sidewalk_New, Sidewalk),
+                                   Obstacles = ifelse(!is.na(Obstacles_New), Obstacles_New, Obstacles),
+                                   Obstacle_Desc = ifelse(!is.na(Obstacle_Desc_New), Obstacle_Desc_New, Obstacle_Desc),
+                                   Boarding_Area = ifelse(!is.na(Boarding_Area_New), Boarding_Area_New, Boarding_Area),
+                                   Crosswalk_Features = ifelse(!is.na(Crosswalk_Features_New), Crosswalk_Features_New, Crosswalk_Features)) %>%
+                            select(-Sidewalk_New, -Obstacles_New, -Obstacle_Desc_New, -Boarding_Area_New, -Crosswalk_Features_New)
   
   # Apply corrections from the Missing Questions Data re-populating
   raw_df_clean_deduped <- correctRecords(
@@ -123,46 +132,48 @@
                               source_sheet   = "Missing Question Records"
                           )
   
+  ######################### REMOVE SPECIAL DUPLICATES #########################
   
-  # Remove Duplicates of same record with different Cleanliness and Timestamp field entries
-  raw_df_clean_deduped <- raw_df_clean_deduped %>% arrange(Stop_ID, Email_Masked, Timestamp) %>%
-                                                   mutate(Duplicate = ifelse(Stop_ID == dplyr::lag(Stop_ID) &
-                                                                             Email_Masked == dplyr::lag(Email_Masked) &
-                                                                             Main_Street == dplyr::lag(Main_Street) &
-                                                                             Nearest_Landmark == dplyr::lag(Nearest_Landmark) &
-                                                                             Routes == dplyr::lag(Routes) &
-                                                                             Direction == dplyr::lag(Direction) &
-                                                                             Seating == dplyr::lag(Seating) &
-                                                                             Shelter == dplyr::lag(Shelter) &
-                                                                             Trash_Can == dplyr::lag(Trash_Can) &
-                                                                             Line_of_Sight == dplyr::lag(Line_of_Sight) &
-                                                                             Wayfinding == dplyr::lag(Wayfinding) &
-                                                                             Wayfinding_Accessibility == dplyr::lag(Wayfinding_Accessibility) &
-                                                                             Lighting == dplyr::lag(Lighting) &
-                                                                             Sidewalk == dplyr::lag(Sidewalk) &
-                                                                             Obstacles == dplyr::lag(Obstacles) &
-                                                                             Obstacle_Desc == dplyr::lag(Obstacle_Desc) &
-                                                                             Boarding_Area == dplyr::lag(Boarding_Area) &
-                                                                             Crosswalks == dplyr::lag(Crosswalks) &
-                                                                             Crosswalk_Features == dplyr::lag(Crosswalk_Features) &
-                                                                             Behavior == dplyr::lag(Behavior) &
-                                                                             On_Site_Survey == dplyr::lag(On_Site_Survey) &
-                                                                             Additional_Comments == dplyr::lag(Additional_Comments) &
-                                                                             is.na(Timestamp) & is.na(Cleanliness), "Duplicate", ""
-                                                                             )) %>%
-                                                    dplyr::filter(Duplicate == "") %>%
-                                                    select(-Duplicate)
+  # Remove Duplicates of same record with different Cleanliness and Timestamp field entries | Data Cleaning Task #11
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                            arrange(Stop_ID, Email_Masked, Timestamp) %>%
+                            mutate(Duplicate = ifelse(Stop_ID == dplyr::lag(Stop_ID) &
+                                   Email_Masked == dplyr::lag(Email_Masked) &
+                                   Main_Street == dplyr::lag(Main_Street) &
+                                   Nearest_Landmark == dplyr::lag(Nearest_Landmark) &
+                                   Routes == dplyr::lag(Routes) &
+                                   Direction == dplyr::lag(Direction) &
+                                   Seating == dplyr::lag(Seating) &
+                                   Shelter == dplyr::lag(Shelter) &
+                                   Trash_Can == dplyr::lag(Trash_Can) &
+                                   Line_of_Sight == dplyr::lag(Line_of_Sight) &
+                                   Wayfinding == dplyr::lag(Wayfinding) &
+                                   Wayfinding_Accessibility == dplyr::lag(Wayfinding_Accessibility) &
+                                   Lighting == dplyr::lag(Lighting) &
+                                   Sidewalk == dplyr::lag(Sidewalk) &
+                                   Obstacles == dplyr::lag(Obstacles) &
+                                   Obstacle_Desc == dplyr::lag(Obstacle_Desc) &
+                                   Boarding_Area == dplyr::lag(Boarding_Area) &
+                                   Crosswalks == dplyr::lag(Crosswalks) &
+                                   Crosswalk_Features == dplyr::lag(Crosswalk_Features) &
+                                   Behavior == dplyr::lag(Behavior) &
+                                   On_Site_Survey == dplyr::lag(On_Site_Survey) &
+                                   Additional_Comments == dplyr::lag(Additional_Comments) &
+                                   is.na(Timestamp) & is.na(Cleanliness), "Duplicate", "")) %>%
+                            dplyr::filter(Duplicate == "") %>%
+                            select(-Duplicate)
   
-  duplicates_by_fields <- raw_df_clean_deduped %>% distinct_at(vars(-Record_ID, -Timestamp, -Email_Masked,
-                                                                    -Main_Street, -Nearest_Landmark, -Routes,
-                                                                    -Direction, -Cleanliness, -Line_of_Sight, 
-                                                                    -Lighting, -Obstacles, -Obstacle_Desc,
-                                                                    -Behavior, -On_Site_Survey, -Additional_Comments), .keep_all = TRUE) %>%
-                                                   arrange(Stop_ID, Timestamp, Email_Masked) %>%
-                                                   mutate(Duplicate = ifelse((Stop_ID == dplyr::lag(Stop_ID) | Stop_ID == dplyr::lead(Stop_ID)),
-                                                                               "Duplicate","")) %>%
-                                                   dplyr::filter(Duplicate != "") %>%
-                                                   select(-Duplicate)
+  # Data Cleaning Task #12
+  duplicates_by_fields <- raw_df_clean_deduped %>% 
+                            distinct_at(vars(-Record_ID, -Timestamp, -Email_Masked,
+                                             -Main_Street, -Nearest_Landmark, -Routes,
+                                             -Direction, -Cleanliness, -Line_of_Sight, 
+                                             -Lighting, -Obstacles, -Obstacle_Desc,
+                                             -Behavior, -On_Site_Survey, -Additional_Comments), .keep_all = TRUE) %>%
+                            arrange(Stop_ID, Timestamp, Email_Masked) %>%
+                            mutate(Duplicate = ifelse((Stop_ID == dplyr::lag(Stop_ID) | Stop_ID == dplyr::lead(Stop_ID)), "Duplicate","")) %>%
+                            dplyr::filter(Duplicate != "") %>%
+                            select(-Duplicate)
 
   
   #write.csv(duplicates_by_fields, here("data", "raw_data", "validation", "Duplicate Records by Stop ID Round 2.csv"), row.names = FALSE)
@@ -192,8 +203,7 @@
   # data and corrections were inputted. These duplicates were exported to their own file then copied into the "Duplicates by Stop ID" sheet
   # in the Bus Stop Census Corrections Workbook
   
-  ###################### REMOVE DUPLICATES BY STOP ID AND SURVEYOR ######################### 
-  
+  # Remove Duplicates By Stop ID and Surveyor | Data Cleaning Task #13 
   # Identify Duplicate Records by Stop_ID and Surveyor
   surveyor_duplicates <- raw_df_clean_deduped %>% select(Stop_ID, Email_Masked) %>% 
     group_by(Stop_ID, Email_Masked) %>%
@@ -215,7 +225,7 @@
   
   ###################### SPREAD DATA FOR SELECT ALL THAT APPLY RESPONSES ######################### 
   
-  # Separate Select All That Apply Question Fields With Multiple Answers Into One Field Per Answer
+  # Separate Select All That Apply Question Fields With Multiple Answers Into One Field Per Answer | Data Cleaning Task #14
   raw_df_clean_deduped <- raw_df_clean_deduped %>% 
                               mutate(Litter = ifelse(grepl("Litter at the stop", Cleanliness, fixed = TRUE), "Yes", "No"),
                                      Grafitti = ifelse(grepl("Graffiti (unauthorized) or tagging on bus stop amenities",Cleanliness, fixed = TRUE), "Yes", "No"),
@@ -253,13 +263,14 @@
   
   ###################### SPREAD DATA FOR SELECT ALL THAT APPLY RESPONSES ######################### 
   
-  # Clean Trash_Can and Overflow Contradictory Answers
+  # Clean Trash_Can and Overflow Contradictory Answers | Data Cleaning Task #15
   trash_can_verification <- raw_df_clean_deduped %>% 
                                 mutate(Flag = ifelse(Trash_Can == "No" & Overflow == "Yes", "FLAG", "")) %>%
                                 dplyr::filter(Flag == "FLAG")
   #write.csv(trash_can_verification, here("data", "raw_data", "validation", "Trash_Can and Overflow Responses.csv"), row.names = FALSE)
   
-  # Identify and Export Records where the surveyor selected one or more wayfinding information present and in Wayfinding Accessibility selected "No, no wayfinding information present"
+  # Identify and Export Records where the surveyor selected one or more wayfinding information present 
+  # and in Wayfinding Accessibility selected "No, no wayfinding information present" | Data Cleaning Task #16
   wayfinding_verification <- raw_df_clean_deduped %>%
                                 mutate(Flag = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") > 0 &
                                                      Wayfinding_Accessibility == "No wayfinding information present",
@@ -292,14 +303,14 @@
   
   ###################### DATA MODIFICATIONS BASED ON MARTA ARMY ASSUMPTIONS #########################
   
-  # Clean Contradictory Behavior Answers
+  # Clean Contradictory Behavior Answers | Data Cleaning Task #
   raw_df_clean_deduped <- raw_df_clean_deduped %>% 
-                              mutate(First_Visit       = ifelse(First_Visit         == "Yes"  &  
-                                                               (Informal_Pathways   == "Yes" | 
-                                                                Compete_For_Seat    == "Yes" |
-                                                                Cross_Midblock      == "Yes" | 
-                                                                Catch_The_Bus       == "Yes" |
-                                                                Dangerous_Motorists == "Yes"), "No", ""),
+                              mutate(First_Visit = ifelse(First_Visit         == "Yes"  &  
+                                                         (Informal_Pathways   == "Yes" | 
+                                                          Compete_For_Seat    == "Yes" |
+                                                          Cross_Midblock      == "Yes" | 
+                                                          Catch_The_Bus       == "Yes" |
+                                                          Dangerous_Motorists == "Yes"), "No", ""),
                                      Regular_User_None = ifelse(Regular_User_None   == "Yes"  &  
                                                                (Informal_Pathways   == "Yes" | 
                                                                 Compete_For_Seat    == "Yes" |
@@ -307,29 +318,42 @@
                                                                 Catch_The_Bus       == "Yes" |
                                                                 Dangerous_Motorists == "Yes"), "No", ""))
   
-  # Clean Wayfinding Field
-  'Because all MARTA bus stop markers have the Customer Service Number print on them, we have made the decision to replace all responses
-  with "None of the above" to "Customer Service Information"'
+  # Remove "None of the Above" response to the Wayfinding Question | Data Cleaning Task #
+  'Because all MARTA bus stop markers have the Customer Service Number print on them, we have made the decision to remove the "None of the Above" 
+  option from all records and to make "Customer Service Information" the default for each record'
   raw_df_clean_deduped <- raw_df_clean_deduped %>% 
-                              mutate(None_Of_The_Above = 
-                                       ifelse((Route_Number == "Yes" | Route_Schedule == "Yes" |
-                                               Route_Map == "Yes" | Customer_Service == "Yes") &
-                                               None_Of_The_Above == "Yes", "No", "Yes"),
-                                      Customer_Service = "Yes",
-                                      None_Of_The_Above = "No")
+                              mutate(Customer_Service = "Yes",
+                                     None_Of_The_Above = "No")
   
-  
-  # Clean Wayfinding Accessibility Field
+  # Modify records to show "No wayfinding information present" when only Customer Service Information is selected for Wayfinding information present
   raw_df_clean_deduped <- raw_df_clean_deduped %>% 
                               mutate(Wayfinding_Accessibility = 
                                        ifelse(Route_Number == "No" & Route_Schedule == "No" & Route_Map == "No" & Customer_Service == "Yes",
                                               "No wayfinding information present", Wayfinding_Accessibility))
   
   # {Code to update shelter wayfinding accessibility answers to "No" to go here}
+  raw_df_clean_deduped <- raw_df_clean_deduped %>%
+                            mutate(Wayfinding_Accessibility = ifelse(Shelter == "Yes" & 
+                                                                     Seating == "Yes, there is seating provided by MARTA or another transit agency" &
+                                                                     (Route_Number == "Yes" | Route_Schedule == "Yes" | Route_Map == "Yes"),
+                                                                     "No", Wayfinding_Accessibility))
  
   # {Code to Update Main Street and Nearest Landmark to Go Here}
+  raw_df_clean_deduped <- raw_df_clean_deduped %>% 
+                                  inner_join(final_stop_list, by = c("Stop_ID" = "stop_id")) %>%
+                                  mutate(Routes = Routes_Final,
+                                         Direction = Direction_Final,
+                                         Nearest_Landmark = Cross_Street) %>%
+                                  select(Record_ID, Stop_ID, Stop_Lat, Stop_Lon, Timestamp, Email_Masked, Main_Street_or_Station, Nearest_Landmark, Routes, Direction,
+                                         Seating, Shelter, Trash_Can, Litter, Grafitti, Overflow, Dirty_Seating, Other, Line_of_Sight,
+                                         Route_Number, Route_Schedule, Route_Map, Customer_Service, None_Of_The_Above, Wayfinding_Accessibility,
+                                         Lighting, Sidewalk, Obstacles, Obstacle_Desc, Boarding_Area, Main_Street_Crosswalk, Cross_Street_Crosswalk, 
+                                         Worn_Faded, No_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, Informal_Pathways,
+                                         Compete_For_Seat, Cross_Midblock, Catch_The_Bus, Dangerous_Motorists, First_Visit, Regular_User_None,
+                                         On_Site_Survey, Additional_Comments)
+                                                               
   
   ###################### EXPORT CLEANED DATA ###################### 
-  # write.csv(raw_df_clean_deduped, file = here("data", "tidy_data", "pre_processed_survey_df.csv"))
+  write.csv(raw_df_clean_deduped, file = here("data", "tidy_data", "pre_processed_survey_df.csv"), row.names = FALSE)
   
             
