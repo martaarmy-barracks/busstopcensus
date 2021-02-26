@@ -256,15 +256,15 @@ The following is a list of all the fields and the question they match with or de
 - **No_Crosswalk**
   - Is there a clearly painted crosswalk within 100 feet of the bus stop? (Select all that apply.) *No, no painted crosswalk within 100 feet*
 - **Traffic_Light**
-  What features does the crosswalk(s) have? Select all that apply. *Traffic Light*
+  - What features does the crosswalk(s) have? Select all that apply. *Traffic Light*
 - **Curb_Cuts**
-  What features does the crosswalk(s) have? Select all that apply. *Curb cuts for wheelchairs*
+  - What features does the crosswalk(s) have? Select all that apply. *Curb cuts for wheelchairs*
 - **Crosswalk_Signals**
-  What features does the crosswalk(s) have? Select all that apply. *Crosswalk signals with push button*
+  - What features does the crosswalk(s) have? Select all that apply. *Crosswalk signals with push button*
 - **Crossing_Audio**
-  What features does the crosswalk(s) have? Select all that apply. *Crossing audio overlays for visually impaired*
-- **Tactile_Guide
-  What features does the crosswalk(s) have? Select all that apply. *Tactile guide strips for visually impaired*
+  - What features does the crosswalk(s) have? Select all that apply. *Crossing audio overlays for visually impaired*
+- **Tactile_Guide**
+  - What features does the crosswalk(s) have? Select all that apply. *Tactile guide strips for visually impaired*
 - **Informal_Pathways**
   - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *Pedestrians using informal pathways where sidewalks do not exist*
 - **Compete_For_Seat**
