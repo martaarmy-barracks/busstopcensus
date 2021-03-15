@@ -45,8 +45,12 @@ To clone this repository onto your local environment, follow these steps:
 R is an extensible system where people can share useful code in the form of *packages*. All the packages required for this project will load in the `.Rprofile` file upon opening the project. All you need to do is install the packages. Run the code below to install all of the required packages:
 ```
 pkgs <- c("chron", "data.table", "dplyr", "geosphere", "ggplot2", # package names
-           "googlesheets4", "here", "jsonlite", "leaflet", "stringdist", "stringr", "tidyr")
+           "googlesheets4", "here", "jsonlite", "leaflet", 
+           "maps", "stringdist", "stringr", "tidyr")
 install.packages(pkgs, dependencies = TRUE) # install packages
+
+library(devtools)
+install_github('mhudecheck/revgeo')
 ```
 
 ### Further Resources
