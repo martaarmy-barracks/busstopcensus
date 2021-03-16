@@ -1,7 +1,8 @@
 
   ## LOAD LIBRARIES -------------------------------------------------------------------------------------------------
   pkgs <- c("chron", "data.table", "dplyr", "geosphere", "ggplot2", # package names
-            "googlesheets4", "here", "jsonlite", "leaflet", "stringdist", "stringr", "tidyr")
+            "googlesheets4", "here", "jsonlite", "leaflet", 
+            "maps", "revgeo", "stringdist", "stringr", "tidyr")
   
   inst = lapply(pkgs, library, character.only = TRUE) # load packages
   
@@ -59,6 +60,9 @@
                                              dplyr::summarise(Routes = paste(route_short_name, collapse = ", "),
                                                              Direction = paste(Direction, collapse = ", "))
   
+  rm(gtfs_dec_2019_df_list)
+  rm(route_data_2019)
+  
   route_data_2020 <- gtfs_dec_2020_df_list[[7]]
   stop_route_summary_2020 <- route_data_2020 %>% distinct(stop_id,
                                                           stop_name,
@@ -73,6 +77,8 @@
                                                   dplyr::summarise(Routes = paste(route_short_name, collapse = ", "),
                                                                    Direction = paste(Direction, collapse = ", "))
   
+  rm(gtfs_dec_2020_df_list)
+  rm(route_data_2020)
   
   # Collect GTFS Stop Data to Compare to Survey Responses
   stop_comparison_data <- stop_route_summary_2019 %>% full_join(stop_route_summary_2020, by = c("stop_id")) %>%       # Join pre-pandemic stop data with end of 2020 stop data
