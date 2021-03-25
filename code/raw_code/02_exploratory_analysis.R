@@ -1,66 +1,186 @@
-  
-  library(sp)
-  library(maps)
-  library(maptools)
 
   ######################### IMPORT DATA ######################### 
-  raw_df <- read.csv(here("data", "tidy_data", "pre_processed_survey_df.csv"))
-
-  ## IMPORT Subset
-  survey_df <- raw_df %>% rename(Stop_ID = stopid,
-                                         Crosswalk_Features = `crosswalk_features`,
-                                         Line_of_Sight = blocked,
-                                         Direction = `headings`,
-                                         On_Site_Survey = `location`,
-                                         Trash_Can = `trash`,
-                                         Seating = seating,
-                                         Main_Street = `street`,
-                                         Shelter = shelter,
-                                         Behavior = `danger`,
-                                         Nearest_Landmark = `landmark`,
-                                         Routes = `routes`,
-                                         Email = email,
-                                         Sidewalk = boarding,
-                                         Crosswalk = crosswalk,
-                                         Lighting = `light`,
-                                         Boarding_Area = `paving`,
-                                         Wayfinding = wayfinding,
-                                         Wayfinding_Accessibility = `height`,
-                                         Obstacles = obstacles,
-                                         Obstacle_Desc = `obstacle_info`,
-                                         Additional_Comments = `comments`,
-                                         Timestamp = timestamp,
-                                         Cleanliness = dirty,
-                                         Image = image) %>%
-    select(Stop_ID, Timestamp, Email, Main_Street, Nearest_Landmark,
-           Routes, Direction, Seating, Shelter, Trash_Can,
-           Cleanliness, Line_of_Sight, Wayfinding, Wayfinding_Accessibility,
-           Lighting, Sidewalk, Obstacles, Obstacle_Desc,
-           Boarding_Area, Crosswalk, Crosswalk_Features,
-           Behavior, On_Site_Survey, Additional_Comments) %>%
-    distinct() %>%
-    dplyr::filter(Stop_ID != 210010)
-  
+  # Survey Responses
+  survey_df <- read.csv(here("data", "tidy_data", "pre_processed_survey_df.csv"))
   survey_df$Stop_ID <- as.character(survey_df$Stop_ID)
   
-  survey_df <- raw_df_clean_deduped
+  # Ridership Data
+  pre_covid_weekday <- read.xlsx(
+    here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
+    sheet = "Nov 1-15, 2019_Wkdy",
+    startRow = 5,
+    colNames = TRUE,
+    rowNames = FALSE
+  ) %>%
+    rename(Pre_COVID_Weekday_Boardings = Ons,
+           Pre_COVID_Weekday_Alightings = Offs) 
   
+  pre_covid_saturday <- read.xlsx(
+    here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
+    sheet = "Nov 1-15, 2019_Sat",
+    startRow = 5,
+    colNames = TRUE,
+    rowNames = FALSE
+  ) %>%
+    rename(Pre_COVID_Saturday_Boardings = Ons,
+           Pre_COVID_Saturday_Alightings = Offs) 
+  
+  pre_covid_sunday <- read.xlsx(
+    here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
+    sheet = "Nov 1-15, 2019_Sun",
+    startRow = 5,
+    colNames = TRUE,
+    rowNames = FALSE
+  ) %>%
+    rename(Pre_COVID_Sunday_Boardings = Ons,
+           Pre_COVID_Sunday_Alightings = Offs) 
+  
+  post_covid_weekday <- read.xlsx(
+    here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
+    sheet = "Nov 1-15, 2020_Wkdy",
+    startRow = 5,
+    colNames = TRUE,
+    rowNames = FALSE
+  ) %>%
+    rename(Post_COVID_Weekday_Boardings = Ons,
+           Post_COVID_Weekday_Alightings = Offs) 
+  
+  post_covid_saturday <- read.xlsx(
+    here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
+    sheet = "Nov 1-15, 2020_Sat",
+    startRow = 5,
+    colNames = TRUE,
+    rowNames = FALSE
+  ) %>%
+    rename(Post_COVID_Saturday_Boardings = Ons,
+           Post_COVID_Saturday_Alightings = Offs) 
+  
+  post_covid_sunday <- read.xlsx(
+    here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
+    sheet = "Nov 1-15, 2020_Sun",
+    startRow = 5,
+    colNames = TRUE,
+    rowNames = FALSE
+  ) %>%
+    rename(Post_COVID_Sunday_Boardings = Ons,
+           Post_COVID_Sunday_Alightings = Offs)
+  
+  boarding_alighting_df <- pre_covid_weekday %>% 
+    full_join(pre_covid_saturday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
+    full_join(pre_covid_sunday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
+    full_join(post_covid_weekday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
+    full_join(post_covid_saturday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
+    full_join(post_covid_sunday, by = c("Route", "Direction", "Stop.ID", "Stop.Name"))
+  
+  rm(pre_covid_weekday)
+  rm(pre_covid_saturday)
+  rm(pre_covid_sunday)
+  rm(post_covid_weekday)
+  rm(post_covid_saturday)
+  rm(post_covid_sunday)
+  
+  boarding_alighting_summary <- boarding_alighting_df %>%
+      mutate(Total_Weekly_Avg_Pre_COVID_Boardings = Pre_COVID_Weekday_Boardings + Pre_COVID_Saturday_Boardings + Pre_COVID_Sunday_Boardings,
+             Total_Weekly_Avg_Pre_COVID_Alightings = Pre_COVID_Weekday_Alightings + Pre_COVID_Saturday_Alightings + Pre_COVID_Sunday_Alightings,
+             Total_Weekly_Avg_Pre_COVID_Ons_Offs = Pre_COVID_Weekday_Boardings + Pre_COVID_Saturday_Boardings + Pre_COVID_Sunday_Boardings +
+                                                       Pre_COVID_Weekday_Alightings + Pre_COVID_Saturday_Alightings + Pre_COVID_Sunday_Alightings,
+             Total_Weekly_Avg_Post_COVID_Boardings = Post_COVID_Weekday_Boardings + Post_COVID_Saturday_Boardings + Post_COVID_Sunday_Boardings,
+             Total_Weekly_Avg_Post_COVID_Alightings = Post_COVID_Weekday_Alightings + Post_COVID_Saturday_Alightings + Post_COVID_Sunday_Alightings,
+             Total_Weekly_Avg_Post_COVID_Ons_Offs = Post_COVID_Weekday_Boardings + Post_COVID_Saturday_Boardings + Post_COVID_Sunday_Boardings +
+                                                       Post_COVID_Weekday_Alightings + Post_COVID_Saturday_Alightings + Post_COVID_Sunday_Alightings) %>%
+    select(Stop.ID, Stop.Name, Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
+           Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
+           Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
+    group_by(Stop.ID, Stop.Name) %>%
+    summarize(Total_Weekly_Avg_Pre_COVID_Boardings = sum(Total_Weekly_Avg_Pre_COVID_Boardings, na.rm = TRUE),
+              Total_Weekly_Avg_Pre_COVID_Alightings = sum(Total_Weekly_Avg_Pre_COVID_Alightings, na.rm = TRUE),
+              Total_Weekly_Avg_Pre_COVID_Ons_Offs = sum(Total_Weekly_Avg_Pre_COVID_Ons_Offs, na.rm = TRUE),
+              Total_Weekly_Avg_Post_COVID_Boardings = sum(Total_Weekly_Avg_Post_COVID_Boardings, na.rm = TRUE),
+              Total_Weekly_Avg_Post_COVID_Alightings = sum(Total_Weekly_Avg_Post_COVID_Alightings, na.rm = TRUE),
+              Total_Weekly_Avg_Post_COVID_Ons_Offs = sum(Total_Weekly_Avg_Post_COVID_Ons_Offs, na.rm = TRUE))
+  
+  boarding_alighting_summary$Stop.ID <- as.character(boarding_alighting_summary$Stop.ID)
+  
+  survey_df <- survey_df %>%
+    inner_join(boarding_alighting_summary, by = c("Stop_ID" = "Stop.ID")) %>%
+    select(-Stop.Name)
+  
+  ######################### CREATE EXCEL WORKBOOK FOR FINDINGS #########################
+  wb <- createWorkbook()
+  
+  addWorksheet(wb, "Survey Responses")
+  addWorksheet(wb, "Boarding and Alighting Data")
+  addWorksheet(wb, "Boarding and Alighting Summary")
+  addWorksheet(wb, "Seating")
+  addWorksheet(wb, "Shelter")
+  addWorksheet(wb, "Trash Can")
+  addWorksheet(wb, "Trash Can")
+  addWorksheet(wb, "")
+  addWorksheet(wb, "Sidewalks")
+  addWorksheet(wb, "Obtacles")
+  addWorksheet(wb, "Obstacle Descriptions")
+  addWorksheet(wb, "Boarding Area")
+  addWorksheet(wb, "Crosswalks")
+  addWorksheet(wb, "Crosswalk Features")
+  addWorksheet(wb, "Observed Behavior")
+  
+  writeData(wb, "Survey Responses", survey_df, startCol = 1, startRow = 1, colNames = TRUE)
+  writeData(wb, "Boarding and Alighting Data", boarding_alighting_df, startCol = 1, startRow = 1, colNames = TRUE)
+  writeData(wb, "Boarding and Alighting Summary", )
+  
+  ######################### ORDER RESPONSES #########################
+  survey_df$Seating <- factor(survey_df$Seating, 
+                              levels = c("Yes, there is seating provided by MARTA or another transit agency",
+                                         "Yes, there is seating provided by someone else",
+                                         "No, there is no seating"))
+  
+  survey_df$Shelter <- factor(survey_df$Shelter, 
+                              levels = c("Yes",
+                                         "No"))
+  
+  survey_df$Trash_Can <- factor(survey_df$Trash_Can, 
+                              levels = c("Yes",
+                                         "No"))
+  
+  survey_df$Wayfinding_Accessibility <- factor(survey_df$Wayfinding_Accessibility,
+                                               levels = c("Yes",
+                                                          "No",
+                                                          "No wayfinding information present"))
+  
+  survey_df$Lighting <- factor(survey_df$Lighting,
+                               levels = c("Yes",
+                                          "No",
+                                          "I don't know"))
+  
+  survey_df$Sidewalk <- factor(survey_df$Sidewalk, 
+                                levels = c("Yes, in both directions",
+                                           "Yes, in only one direction",
+                                           "No"))
+  
+  survey_df$Obstacles <- factor(survey_df$Obstacles,
+                                levels = c("Yes",
+                                           "No"))
+  
+  # Test Function
+  
+  
+
   ## ANALYSIS ###################################################################################################################
   # Seating
-  seating <- survey_df %>% distinct(Stop_ID, Seating) %>%
-    group_by(Seating) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  seating <- summaryTableCreator(survey_df, "Seating", NA)
+  seating_by_county <- summaryTableCreator(survey_df, "Seating", "County")
+  seating_by_city <- summaryTableCreator(survey_df, "Seating", "City")
   
-  seating_coord <- survey_df %>% distinct(Stop_ID, Seating) %>%
-    dplyr::filter(!is.na(Seating)) %>%
+  writeData(wb, "Seating", seating, startCol = 1, startRow = 1, colNames = TRUE)
+  writeData(wb, "Seating", seating_by_county, startCol = 1, startRow = 6, colNames = TRUE)
+  
+  seating_coord <- survey_df %>% distinct(Stop_ID, Stop_Lat, Stop_Lon, Seating) %>%
     mutate(Seating_Combined = ifelse(Seating == "No, there is no seating", "No, there is no seating", "Yes, there is seating")) %>%
-    inner_join(stops, by = c("Stop_ID" = "stop_id")) %>%
-    select(Stop_ID, Seating_Combined, stop_lat, stop_lon)
+    select(Stop_ID, Seating_Combined, Stop_Lat, Stop_Lon)
   
   seating_map <- leaflet(data = seating_coord) %>%
     addProviderTiles(providers$CartoDB.Positron) %>% #HERE.normalDayGrey) %>%  # Add default OpenStreetMap map tiles
-    addCircleMarkers(~stop_lon, ~stop_lat,
+    addCircleMarkers(~Stop_Lon, ~Stop_Lat,
                      radius = 2,
                      color = ~ifelse(Seating_Combined == "Yes, there is seating","green", "red"),
                      stroke = FALSE, fillOpacity = 1) %>%
@@ -71,21 +191,21 @@
   seating_map 
   
   # Shelter
-  shelter <- survey_df %>% 
-    distinct(Stop_ID, Shelter) %>%
-    group_by(Shelter) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  shelter <- summaryTableCreator(survey_df, "Shelter", NA)
+  shelter_by_county <- summaryTableCreator(survey_df, "Shelter", "County")
+  shelter_by_city <- summaryTableCreator(survey_df, "Shelter", "City")
+  
+  writeData(wb, "Shelter", shelter, startCol = 1, startRow = 1, colNames = TRUE)
+  writeData(wb, "Shelter", shelter_by_county, startCol = 1, startRow = 5, colNames = TRUE)
   
   # Trash Can
-  trash_can <- survey_df %>% 
-    distinct(Stop_ID, Trash_Can) %>%
-    group_by(Trash_Can) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  trash_can <- summaryTableCreator(survey_df, "Trash_Can", NA)
+  trash_can_by_county <- summaryTableCreator(survey_df, "Trash_Can", "County")
+  trash_can_by_city <- summaryTableCreator(survey_df, "Trash_Can", "City")
+  
   
   ## Cleanliness
-  cleanliness_summary <- survey_df %>% 
+  cleanliness <- survey_df %>% 
                           select(Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
                           summarize(Litter = sum(Litter == "Yes"),
                                     Grafitti = sum(Grafitti == "Yes"),
@@ -97,29 +217,36 @@
                           mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
                           select(Cleanliness_Issue, Count, Percent_Total)
   
+  cleanliness_by_county <- survey_df %>% 
+    select(County, Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
+    group_by(County) %>%
+    summarize(Litter = sum(Litter == "Yes"),
+              Grafitti = sum(Grafitti == "Yes"),
+              Overflow = sum(Overflow == "Yes"),
+              Dirty_Seating = sum(Dirty_Seating == "Yes"),
+              Other = sum(Other == "Yes"),
+              Total_Stops = n()) 
+    # gather("Cleanliness_Issue", "Count", -Total_Stops, -County) %>%
+    # mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
+    # select(County, Cleanliness_Issue, Count, Percent_Total)
+  cleanliness_by_city <- survey_df %>% 
+    select(City, Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
+    group_by(City) %>%
+    summarize(Litter = sum(Litter == "Yes"),
+              Grafitti = sum(Grafitti == "Yes"),
+              Overflow = sum(Overflow == "Yes"),
+              Dirty_Seating = sum(Dirty_Seating == "Yes"),
+              Other = sum(Other == "Yes"),
+              Total_Stops = n())
+    
+  
   ## Line of Sight
-  line_of_sight <- survey_df %>% 
-    distinct(Stop_ID, Line_of_Sight) %>%
-    group_by(Line_of_Sight) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  line_of_sight <- summaryTableCreator(survey_df, "Line_of_Sight", NA)
+  line_of_sight_by_county <- summaryTableCreator(survey_df, "Line_of_Sight", NA)
+  line_of_sight_by_city <- summaryTableCreator(survey_df, "Line_of_Sight", NA)
+
   
   ## Wayfinding
-  wayfinding <- survey_df %>% distinct(Stop_ID, Wayfinding) %>%
-    mutate(Route_Number = ifelse(grepl("Route Numbers", Wayfinding, fixed = TRUE), 1, 0),
-           Route_Schedule = ifelse(grepl("Route Schedule", Wayfinding, fixed = TRUE), 1, 0),
-           Route_Map = ifelse(grepl("Route Map", Wayfinding, fixed = TRUE), 1,0),
-           Customer_Service = ifelse(grepl("Customer Service Information", Wayfinding, fixed = TRUE), 1, 0),
-           None_Of_The_Above = ifelse(grepl("None of the Above", Wayfinding, fixed = TRUE), 1, 0),
-           Stop_Counter = 1,
-           Some_Route_Info_Only = ifelse(Route_Number + Route_Schedule + Route_Map <= 2 & Customer_Service == 0, 1, 0),
-           Some_Route_Info_And_Cust_Serv = ifelse(Route_Number + Route_Schedule + Route_Map > 0 & Route_Number + Route_Schedule + Route_Map < 3 &
-                                                    Customer_Service == 1, 1,0),
-           All_Route_Info_Only = ifelse(Route_Number + Route_Schedule + Route_Map == 3 & Customer_Service == 0, 1, 0),
-           All_Route_Info_And_Cust_Serv = ifelse(Route_Number + Route_Schedule + Route_Map == 3 & Customer_Service == 1, 1, 0),
-           Customer_Service_Only = ifelse(Route_Number + Route_Schedule + Route_Map == 0 & Customer_Service == 1, 1, 0),
-           No_Wayfinding = ifelse(Route_Number + Route_Schedule + Route_Map == 0 & Customer_Service == 0, 1, 0))
-  
   wayfinding_summary <- survey_df %>% 
                             select(Route_Number, Route_Schedule, Route_Map,
                                    Customer_Service, None_Of_The_Above) %>%
@@ -133,36 +260,35 @@
                             mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
                             select(Wayfinding_Option, Count, Percent_Total)
   
-  wayfinding_summary_comb <- wayfinding %>% select(Some_Route_Info_Only, Some_Route_Info_And_Cust_Serv, All_Route_Info_Only,
-                                                   All_Route_Info_And_Cust_Serv, Customer_Service_Only, No_Wayfinding) %>%
-    summarize(Some_Route_Info_Only = sum(Some_Route_Info_Only), 
-              Some_Route_Info_And_Cust_Serv = sum(Some_Route_Info_And_Cust_Serv), 
-              All_Route_Info_Only = sum(All_Route_Info_Only),
-              All_Route_Info_And_Cust_Serv = sum(All_Route_Info_And_Cust_Serv),
-              Customer_Service_Only = sum(Customer_Service_Only), 
-              No_Wayfinding = sum(No_Wayfinding)) %>%
-    gather("Wayfinding Type", "Count")
+  wayfinding <- survey_df %>% distinct(Stop_ID, Route_Number, Route_Schedule, Route_Map, Customer_Service) %>%
+    mutate(Some_Route_Info_And_Cust_Serv = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") > 0 & Customer_Service == "Yes", 1, 0),
+           All_Route_Info_And_Cust_Serv = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") == 3 & Customer_Service == "Yes", 1, 0),
+           Customer_Service_Only = ifelse(str_count(paste(Route_Number,  Route_Schedule,  Route_Map, sep = ""), "Yes") == 0 & Customer_Service == "Yes", 1, 0))
+  
+
+  wayfinding_summary_comb <- wayfinding %>% 
+    select(Some_Route_Info_And_Cust_Serv, All_Route_Info_And_Cust_Serv, Customer_Service_Only) %>%
+    summarize(Some_Route_Info_And_Cust_Serv = sum(Some_Route_Info_And_Cust_Serv), 
+              All_Route_Info_And_Cust_Serv = sum(All_Route_Info_And_Cust_Serv), 
+              Customer_service_Only = sum(Customer_Service_Only)) %>%
+    gather("Wayfinding Type", "Count") %>%
+    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+
   
   ## Wayfinding Accessibility
-  wayfinding_accessibility <- survey_df %>% 
-                                  distinct(Stop_ID, Wayfinding_Accessibility) %>%
-                                  group_by(Wayfinding_Accessibility) %>%
-                                  summarize(Count = n()) %>%
-                                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  wayfinding_accessibility <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", NA)
+  wayfinding_accessibility_by_county <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", "County")
+    
   
   ## Lighting
-  lighting <- survey_df %>% 
-                  distinct(Stop_ID, Lighting) %>%
-                  group_by(Lighting) %>%
-                  summarize(Count = n()) %>%
-                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  lighting <- summaryTableCreator(survey_df, "Lighting", NA)
+  lighting_by_county <- summaryTableCreator(survey_df, "Lighting", "County")
+  lighting_by_city <- summaryTableCreator(survey_df, "Lighting", "City")
   
   ## Sidewalks
-  sidewalk <- survey_df %>% 
-                  distinct(Stop_ID, Sidewalk) %>%
-                  group_by(Sidewalk) %>%
-                  summarize(Count = n()) %>%
-                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  sidewalk <- summaryTableCreator(survey_df, "Sidewalk", NA)
+  sidewalk_by_county <- summaryTableCreator(survey_df, "Sidewalk", "County")
+  sidewalk_by_county <- summaryTableCreator(survey_df, "Sidewalk", "City")  
   
   sidewalk_coord <- survey_df %>% distinct(Stop_ID, Sidewalk) %>%
     dplyr::filter(!is.na(Sidewalk)) %>%
@@ -182,23 +308,21 @@
   sidewalk_map
   
   ## Obstacles
-  obstacles <- survey_df %>% distinct(Stop_ID, Obstacles) %>%
-    dplyr::filter(!is.na(Obstacles)) %>%
-    group_by(Obstacles) %>%
-    summarize(Count = n()) %>%
-    mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  obstacles <- summaryTableCreator(survey_df, "Obstacles", NA)
+  obstacles_by_county <- summaryTableCreator(survey_df, "Obstacles", "County")
+  obstacles_by_city <- summaryTableCreator(survey_df, "Obstacles", "City")
   
-  obstacles_description <- survey_df %>% distinct(Stop_ID, Main_Street, Nearest_Landmark, Routes, Direction, Obstacles, Obstacle_Desc) %>%
+  obstacles_description <- survey_df %>% 
+    distinct(Stop_ID, Main_Street, Nearest_Landmark, County,
+             City, Routes, Direction, Obstacles, Obstacle_Desc) %>%
     dplyr::filter(Obstacles == "Yes", !is.na(Obstacle_Desc))
   
-  write.csv(obstacles_description, file = "Bus Stop Census Obstacle Descriptions.csv") 
+  writeData(wb, "Obstacle Description", obstacles_description, startCol = 1, startRow = 1, colNames = TRUE)
   
   ## Boarding Areas
-  boarding <- survey_df %>% 
-                  distinct(Stop_ID, Boarding_Area) %>%
-                  group_by(Boarding_Area) %>%
-                  summarize(Count = n()) %>%
-                  mutate(Percent_Total = format(Count / sum(Count), digits = 2))
+  boarding <- summaryTableCreator(survey_df, "Boarding_Area", NA)
+  boarding_by_county <- summaryTableCreator(survey_df, "Boarding_Area", "County")
+  boarding_by_city <- summaryTableCreator(survey_df, "Boarding_Area", "City")
   
   boarding_coord <- survey_df %>% distinct(Stop_ID, Boarding_Area) %>%
     dplyr::filter(!is.na(Boarding_Area) & (Boarding_Area == "Concrete sidewalk" | Boarding_Area == "Grass or dirt")) %>%
@@ -219,25 +343,14 @@
   
   ## Crosswalks
   
-  crosswalks <- survey_df %>% distinct(Stop_ID, Crosswalks) %>%
-    dplyr::filter(!is.na(Crosswalks)) %>%
-    mutate(Main_Street = ifelse(grepl("Yes, on the main street", Crosswalks, fixed = TRUE), 1, 0),
-           Cross_Street = ifelse(grepl("Yes, on the cross street",Crosswalks, fixed = TRUE), 1, 0),
-           Worn_Faded = ifelse(grepl("Yes, and crosswalk paint is faded or worn away", Crosswalks, fixed = TRUE), 1,0),
-           No_Crosswalk = ifelse(grepl("No, no painted crosswalk within 100 feet", Crosswalks, fixed = TRUE), 1, 0),
-           Verify = ifelse((Main_Street + Cross_Street + Worn_Faded) > 0 & No_Crosswalk == 1, 1, 0),
-           Main_Street_Only = ifelse(Main_Street == 1 & Cross_Street == 0, 1, 0),
-           Cross_Street_Only = ifelse(Main_Street == 0 & Cross_Street == 1, 1,0),
-           Main_and_Cross = ifelse(Main_Street == 1 & Cross_Street == 1, 1, 0)) %>%
-    mutate(Verify_2 = Main_Street_Only + Cross_Street_Only + Main_and_Cross + No_Crosswalk)
-  
+  crosswalks <- survey_df %>% distinct(Stop_ID, Main_Street_Crosswalk, Cross_Street_Crosswalk, Worn_Faded, No_Crosswalk) %>%
+    mutate(Main_Street_Only = ifelse(Main_Street_Crosswalk == "Yes" & Cross_Street_Crosswalk == "No", "Yes", "No"),
+           Cross_Street_Only = ifelse(Main_Street_Crosswalk == "No" & Cross_Street_Crosswalk == "Yes", "Yes", "No"),
+           Main_and_Cross = ifelse(Main_Street_Crosswalk == "Yes" & Cross_Street_Crosswalk == "Yes", "Yes", "No"))
   
   crosswalks_summary <- crosswalks %>% select(Stop_ID, Main_Street_Only, Cross_Street_Only, Main_and_Cross, No_Crosswalk) %>%
-    mutate(Verify = Main_Street_Only + Cross_Street_Only + Main_and_Cross + No_Crosswalk) %>%
-    dplyr::filter(Verify != 0 | Verify != 2) %>%
-    mutate(Crosswalk_Type = ifelse(Main_Street_Only == 1, "Main Street Only", 
-                                   ifelse(Cross_Street_Only == 1, "Cross Street Only",
-                                          ifelse(Main_and_Cross == 1, "Main and Cross Street", "No Crosswalk")))) %>%
+    mutate(Verify = str_count(paste(Main_Street_Only, Cross_Street_Only, Main_and_Cross, No_Crosswalk), "Yes") )
+    gather(Crosswalk_Type, Answer, Main_Street_Only:No_Crosswalk) %>%
     select(Stop_ID, Crosswalk_Type) %>%
     group_by(Crosswalk_Type) %>%
     summarize(Count = n()) %>%
@@ -295,49 +408,83 @@
   
   
   # Observations
-  observations <- srg_survey_df %>% distinct(Stop_ID, Behavior) %>%
-    dplyr::filter(!is.na(Behavior)) %>%
-    mutate(Informal_Pathways = ifelse(grepl("Pedestrians using informal pathways where sidewalks do not exist", Behavior, fixed = TRUE), 1, 0),
-           Compete_For_Seat = ifelse(grepl("Pedestrians competing for seating at the bus stop",Behavior, fixed = TRUE), 1, 0),
-           Cross_Midblock = ifelse(grepl("Pedestrians crossing the roadway at midblock locations", Behavior, fixed = TRUE), 1,0),
-           Catch_The_Bus = ifelse(grepl("Pedestrians running across roadways to catch the bus", Behavior, fixed = TRUE), 1, 0),
-           Dangerous_Motorists = ifelse(grepl("Dangerous motorist behavior around bus stop (i.e. speeding or not yielding to pedestrians)", Behavior, fixed = TRUE), 1, 0),
-           First_Visit = ifelse(grepl("None of the above (first visit to this stop)", Behavior, fixed = TRUE), 1, 0),
-           Regular_User_None = ifelse(grepl("None of the above (occasional or frequent user of this stop", Behavior, fixed = TRUE), 1, 0),
-           Stop_Counter = 1)
-  
-  
-  observations_summary <- observations %>% select(Informal_Pathways, Compete_For_Seat, Cross_Midblock, 
+  observations_summary <- survey_df %>% select(Informal_Pathways, Compete_For_Seat, Cross_Midblock, 
                                                   Catch_The_Bus, Dangerous_Motorists, First_Visit,
-                                                  Regular_User_None, Stop_Counter) %>%
-    summarize(Informal_Pathways = sum(Informal_Pathways),
-              Compete_For_Seat = sum(Compete_For_Seat),
-              Cross_Midblock = sum(Cross_Midblock),
-              Catch_The_Bus = sum(Catch_The_Bus),
-              Dangerous_Motorists = sum(Dangerous_Motorists),
-              First_Visit = sum(First_Visit),
-              Regular_User_None = sum(Regular_User_None),
-              Total_Stops = sum(Stop_Counter)) %>%
+                                                  Regular_User_None) %>%
+    summarize(Informal_Pathways = sum(Informal_Pathways == "Yes"),
+              Compete_For_Seat = sum(Compete_For_Seat == "Yes"),
+              Cross_Midblock = sum(Cross_Midblock == "Yes"),
+              Catch_The_Bus = sum(Catch_The_Bus == 'Yes'),
+              Dangerous_Motorists = sum(Dangerous_Motorists == "Yes"),
+              First_Visit = sum(First_Visit == "Yes"),
+              Regular_User_None = sum(Regular_User_None == "Yes"),
+              Total_Stops = n()) %>%
     gather("Observed_Behavior", "Count", -Total_Stops) %>%
     mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
     select(Observed_Behavior, Count, Percent_Total)
   
-  #Anecdotes
+  #Modal Analysis
   
-  anecdotes <- srg_survey_df %>% distinct(Stop_ID, Main_Street, Nearest_Landmark, Routes, Direction,
-                                          Obstacles, Obstacle_Desc, Additional_Comments) 
-  write.csv(anecdotes, file = "SRG Bus Stop Census Anecdotes.csv") 
+  modal_summary <- survey_df %>% 
+    distinct(Stop_ID, Seating, Shelter, Trash_Can, Route_Number, Route_Schedule, Route_Map, Customer_Service, None_Of_The_Above, 
+           Wayfinding_Accessibility, Sidewalk, Boarding_Area, Main_Street_Crosswalk, Cross_Street_Crosswalk, 
+           Worn_Faded, No_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide,
+           Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
+           Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
+           Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
+    group_by(Seating, Shelter, Trash_Can, Route_Number, Route_Schedule, Route_Map, Customer_Service, None_Of_The_Above, 
+             Wayfinding_Accessibility, Sidewalk, Boarding_Area, Main_Street_Crosswalk, Cross_Street_Crosswalk, 
+             Worn_Faded, No_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide) %>%
+    summarize(Count = n(),
+              Cum_Weekly_Avg_Pre_COVID_Boardings = sum(Total_Weekly_Avg_Pre_COVID_Boardings, na.rm = TRUE),
+              Cum_Weekly_Avg_Pre_COVID_Alightings = sum(Total_Weekly_Avg_Pre_COVID_Alightings, na.rm = TRUE),
+              Cum_Weekly_Avg_Pre_COVID_Ons_Offs = sum(Total_Weekly_Avg_Pre_COVID_Ons_Offs, na.rm = TRUE),
+              Cum_Weekly_Avg_Post_COVID_Boardings = sum(Total_Weekly_Avg_Post_COVID_Boardings, na.rm = TRUE),
+              Cum_Weekly_Avg_Post_COVID_Alightings = sum(Total_Weekly_Avg_Post_COVID_Alightings, na.rm = TRUE),
+              Cum_Weekly_Avg_Post_COVID_Ons_Offs = sum(Total_Weekly_Avg_Post_COVID_Ons_Offs, na.rm = TRUE))
+
   
-  ## Bad Bus Stops
+  # Grading 
+  grades <- survey_df %>%
+                mutate(Grade = ifelse(Shelter == "Yes", 10, 0) +
+                               ifelse(Seating == "No, there is no seating", 0, 10) +
+                               ifelse(str_count(paste(Route_Number,  Route_Schedule,  Route_Map, sep = ""), "Yes") == 0 & Customer_Service == "Yes", 0, 
+                                      ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "No", 4, 
+                                             ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "Yes", 8, 0))) +
+                               ifelse(Sidewalk == "Yes, in both directions" | Sidewalk == 'Yes, in only one direction', 25, 0) +
+                               ifelse(Trash_Can == "Yes", 2, 0) +
+                               ifelse(No_Crosswalk == "Yes", 0, 
+                                      ifelse(Main_Street_Crosswalk == "Yes" & 
+                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") == 0, 5, 
+                                      ifelse(Main_Street_Crosswalk == "Yes" &
+                                             str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") > 0 &
+                                             str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") <= 2, 15,
+                                      ifelse(Main_Street_Crosswalk == "Yes" &
+                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") > 2 &
+                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") <= 5, 25, 0)))) +
+                               ifelse(Boarding_Area == "Grass or dirt" | Boarding_Area == "Gravel", 0,
+                                      ifelse(Boarding_Area == "Asphalt", 5, 20)),
+                       Letter_Grade = case_when(
+                                          Grade >= 0 & Grade <= 59 ~ "F",
+                                          Grade > 59 & Grade <= 69 ~ "D",
+                                          Grade > 69 & Grade <= 79 ~ "C",
+                                          Grade > 79 & Grade <= 89 ~ "B",
+                                          Grade > 89 & Grade <= 100 ~ "A",
+                                          TRUE ~ ""
+                       ))
+
+  grade_detail <- grades %>% 
+                      select(Stop_ID, Letter_Grade, Grade, Seating,
+                             Shelter, Trash_Can, Route_Number, Route_Map,
+                             Route_Schedule, Wayfinding_Accessibility,
+                             Sidewalk, Main_Street_Crosswalk, Boarding_Area,
+                             Traffic_Light, Curb_Cuts, Crossing_Audio, Crosswalk_Signals, Tactile_Guide) %>%
+                      dplyr::filter(Grade >= 80 & Grade < 90) 
   
-  bad_stops <- survey_df %>% dplyr::filter(Seating == "No, there is no seating",
-                                           Shelter == "No",
-                                           (Wayfinding == "None of the Above" | Wayfinding == "Customer Service Information"),
-                                           (Wayfinding_Accessibility == "No wayfinding information present" | Wayfinding_Accessibility == "No"),
-                                           (Lighting == "No" | Lighting == "I don't know"),
-                                           Sidewalk == "No",
-                                           Obstacles == "Yes",
-                                           Boarding_Area == "Grass or dirt",
-                                           Crosswalks == "No, no painted crosswalk within 100 feet")
+  grade_summary <- summaryTableCreator(grades, "Letter_Grade", NA)
+    
+  grade_list <- grades$Grade
+  hist(grade_list)
   
-  ## 212553, 211309
+  ######################### EXPORT RESULTS #########################
+  saveWorkbook(wb, "Bus_Stop_Census_Results.xlsx", overwrite = TRUE)

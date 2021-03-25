@@ -224,6 +224,8 @@
   # Apply corrections from the Duplicate Records by Stop ID and Surveyor reconciliation
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Surveyor Duplicate Records")
   
+  rm(surveyor_duplicates)
+  rm(duplicates_by_surveyor_df)
   ###################### SPREAD DATA FOR SELECT ALL THAT APPLY RESPONSES ######################### 
   
   # Separate Select All That Apply Question Fields With Multiple Answers Into One Field Per Answer | Data Cleaning Task #14
@@ -303,6 +305,12 @@
   
   # Apply Contradictory Answer Corrections to Records
   raw_df_clean_deduped <- correctRecords(raw_df_clean_deduped, corrections_df, "Contradictory Responses")
+  
+  rm(trash_can_verification)
+  rm(wayfinding_verification)
+  rm(crosswalk_verification_pt_one)
+  rm(crosswalk_verification_pt_two)
+  rm(seating_verification)
   
   ###################### DATA MODIFICATIONS BASED ON MARTA ARMY ASSUMPTIONS #########################
   
@@ -413,7 +421,7 @@
     Sys.sleep(10)
   
   }
-  
+
   # Reverse geocode coordinates to get county the bus stops are located in
   county <- data.frame(County = map.where(database="county", 
                     data_final$Stop_Lon, data_final$Stop_Lat)) %>%
