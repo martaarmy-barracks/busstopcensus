@@ -111,7 +111,7 @@
           distinct(Stop_ID, !! rlang::sym(field), Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
                    Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
                    Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
-          group_by_(field) %>%
+          group_by(!! rlang::sym(field)) %>%
           summarize(Count = n(),
                     Cum_Weekly_Avg_Pre_COVID_Boardings = sum(Total_Weekly_Avg_Pre_COVID_Boardings, na.rm = TRUE),
                     Cum_Weekly_Avg_Pre_COVID_Alightings = sum(Total_Weekly_Avg_Pre_COVID_Alightings, na.rm = TRUE),
@@ -131,7 +131,7 @@
           distinct(Stop_ID, !! rlang::sym(geo), !! rlang::sym(field), Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
                    Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
                    Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
-          group_by_(geo, field) %>%
+          group_by(!! rlang::sym(geo), !! rlang::sym(field)) %>%
           summarize(Count = n(),
                     Cum_Weekly_Avg_Pre_COVID_Boardings = sum(Total_Weekly_Avg_Pre_COVID_Boardings, na.rm = TRUE),
                     Cum_Weekly_Avg_Pre_COVID_Alightings = sum(Total_Weekly_Avg_Pre_COVID_Alightings, na.rm = TRUE),
