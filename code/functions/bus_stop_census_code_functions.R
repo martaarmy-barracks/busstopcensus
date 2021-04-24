@@ -101,7 +101,7 @@
       select(trip_id,stop_id,stop_sequence,stop_name,arrival_time)
     
     return(list(stops, routes, stop_times, shapes, trips, calendar, route_data, stop_data))
-    
+  }
     
     ## CREATE SUMMARY TABLES WITH RIDERSHIP DATA ------------------------------------------------------------------------
     summaryTableCreator <- function(df, field, geo) {
@@ -151,4 +151,27 @@
       
       return(summary_df) 
     }
-  }
+
+  
+  
+  writeDataToExcel <- function(df_list, wb, sheet_name) {
+    require(openxlsx)
+    for (i in 1:length(df_list)) {
+      if (i == 1) {
+        writeData(wb, sheet_name, df_list[[i]], startCol = 1, startRow = 1, colNames = TRUE)
+        row <- nrow(df_list[[i]]) + 1
+      } else {
+        print(i)
+        writeData(wb, sheet_name, df_list[[i]], startCol = 1, startRow = row + (2 * (i-1)), colNames = TRUE)
+        row <- row + nrow(df_list[[i]]) 
+      }
+    }
+    return(wb)
+  } 
+        
+        
+        
+        
+        
+        
+    

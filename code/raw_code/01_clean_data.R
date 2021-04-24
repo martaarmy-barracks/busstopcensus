@@ -442,7 +442,9 @@
            Lighting, Sidewalk, Obstacles, Obstacle_Desc, Boarding_Area, Main_Street_Crosswalk, Cross_Street_Crosswalk, 
            Worn_Faded, No_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, Informal_Pathways,
            Compete_For_Seat, Cross_Midblock, Catch_The_Bus, Dangerous_Motorists, First_Visit, Regular_User_None,
-           On_Site_Survey, Additional_Comments)
+           On_Site_Survey, Additional_Comments) %>%
+    mutate( City = replace(City, City == "Arlanta", "Atlanta"),
+            City = replace(City, City == "chamblee", "Chamblee"))
   
   
   ###################### EXPORT PREPROCESSED DATA ###################### 
