@@ -112,14 +112,14 @@
                    Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
                    Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
           group_by(!! rlang::sym(field)) %>%
-          summarize(Count = n(),
+          summarize(Stop_Count = n(),
                     Cum_Weekly_Avg_Pre_COVID_Boardings = sum(Total_Weekly_Avg_Pre_COVID_Boardings, na.rm = TRUE),
                     Cum_Weekly_Avg_Pre_COVID_Alightings = sum(Total_Weekly_Avg_Pre_COVID_Alightings, na.rm = TRUE),
                     Cum_Weekly_Avg_Pre_COVID_Ons_Offs = sum(Total_Weekly_Avg_Pre_COVID_Ons_Offs, na.rm = TRUE),
                     Cum_Weekly_Avg_Post_COVID_Boardings = sum(Total_Weekly_Avg_Post_COVID_Boardings, na.rm = TRUE),
                     Cum_Weekly_Avg_Post_COVID_Alightings = sum(Total_Weekly_Avg_Post_COVID_Alightings, na.rm = TRUE),
                     Cum_Weekly_Avg_Post_COVID_Ons_Offs = sum(Total_Weekly_Avg_Post_COVID_Ons_Offs, na.rm = TRUE)) %>%
-          mutate(Percent_Of_Total_Stops = format(Count / sum(Count), digits = 2),
+          mutate(Percent_Of_Total_Stops = format(Stop_Count / sum(Stop_Count), digits = 2),
                  Percent_Cum_Weekly_Avg_Pre_COVID_Boardings = format(Cum_Weekly_Avg_Pre_COVID_Boardings / sum(Cum_Weekly_Avg_Pre_COVID_Boardings), digits = 2),
                  Percent_Cum_Weekly_Avg_Pre_COVID_Alightings = format(Cum_Weekly_Avg_Pre_COVID_Alightings / sum(Cum_Weekly_Avg_Pre_COVID_Alightings), digits = 2),
                  Percent_Cum_Weekly_Avg_Pre_COVID_Ons_Offs = format(Cum_Weekly_Avg_Pre_COVID_Ons_Offs / sum(Cum_Weekly_Avg_Pre_COVID_Ons_Offs), digits = 2),
@@ -132,14 +132,14 @@
                    Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
                    Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
           group_by(!! rlang::sym(geo), !! rlang::sym(field)) %>%
-          summarize(Count = n(),
+          summarize(Stop_Count = n(),
                     Cum_Weekly_Avg_Pre_COVID_Boardings = sum(Total_Weekly_Avg_Pre_COVID_Boardings, na.rm = TRUE),
                     Cum_Weekly_Avg_Pre_COVID_Alightings = sum(Total_Weekly_Avg_Pre_COVID_Alightings, na.rm = TRUE),
                     Cum_Weekly_Avg_Pre_COVID_Ons_Offs = sum(Total_Weekly_Avg_Pre_COVID_Ons_Offs, na.rm = TRUE),
                     Cum_Weekly_Avg_Post_COVID_Boardings = sum(Total_Weekly_Avg_Post_COVID_Boardings, na.rm = TRUE),
                     Cum_Weekly_Avg_Post_COVID_Alightings = sum(Total_Weekly_Avg_Post_COVID_Alightings, na.rm = TRUE),
                     Cum_Weekly_Avg_Post_COVID_Ons_Offs = sum(Total_Weekly_Avg_Post_COVID_Ons_Offs, na.rm = TRUE)) %>%
-          mutate(Percent_Of_Total_Stops = format(Count / sum(Count), digits = 2),
+          mutate(Percent_Of_Total_Stops = format(Stop_Count / sum(Stop_Count), digits = 2),
                  Percent_Cum_Weekly_Avg_Pre_COVID_Boardings = format(Cum_Weekly_Avg_Pre_COVID_Boardings / sum(Cum_Weekly_Avg_Pre_COVID_Boardings), digits = 2),
                  Percent_Cum_Weekly_Avg_Pre_COVID_Alightings = format(Cum_Weekly_Avg_Pre_COVID_Alightings / sum(Cum_Weekly_Avg_Pre_COVID_Alightings), digits = 2),
                  Percent_Cum_Weekly_Avg_Pre_COVID_Ons_Offs = format(Cum_Weekly_Avg_Pre_COVID_Ons_Offs / sum(Cum_Weekly_Avg_Pre_COVID_Ons_Offs), digits = 2),
@@ -152,7 +152,24 @@
       return(summary_df) 
     }
 
-  
+  simpleSummaryTableCreator <- function(df, field, geo) {
+    require(dplyr)
+    if (is.na(geo)) {
+      summary_df <- df %>% 
+        select(Stop_ID, !! rlang::sym(field)) %>%
+        group_by(!! rlang::sym(field)) %>%
+        summarize(Survey_Count = n()) %>%
+        mutate(Percent_Total = format(Survey_Count / sum(Survey_Count), digits = 2))
+    } else {
+      summary_df <- df %>% 
+        select(Stop_ID, !! rlang::sym(geo), !! rlang::sym(field)) %>%
+        group_by(!! rlang::sym(geo), !! rlang::sym(field)) %>%
+        summarize(Survey_Count = n()) %>%
+        mutate(Percent_Total = format(Survey_Count / sum(Survey_Count), digits = 2)) %>%
+        arrange(!! rlang::sym(geo))
+    }
+    return(summary_df)
+  }
   
   writeDataToExcel <- function(df_list, wb, sheet_name) {
     require(openxlsx)
@@ -170,7 +187,19 @@
   } 
         
         
-        
+  createReportTables <- function(df_list) {
+    table_list <- vector("list", length(df_list))
+    for (i in 1:length(df_list)) {
+      if (length(df_list[[i]]) > 10) { # This will only include tables with ridership data
+        table <- df_list[[i]]
+        table <- table[c(1,2,9, 5,12)]
+        table_list[[i]] <- table
+      } else{
+        table_list[[i]] <- df_list[[i]]
+      }
+    }
+    return(table_list)
+  }    
         
         
         
