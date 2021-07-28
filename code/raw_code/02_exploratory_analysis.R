@@ -871,7 +871,7 @@
                        ))
 
   grade_detail <- grades %>% 
-                      distinct(Stop_ID, Letter_Grade, Grade, Seating,
+                      distinct(Stop_ID, Stop_Lat, Stop_Lon, Letter_Grade, Grade, Seating,
                              Shelter, Trash_Can, Route_Number, Route_Map,
                              Route_Schedule, Wayfinding_Accessibility,
                              Sidewalk, Main_Street_Crosswalk, Boarding_Area,
