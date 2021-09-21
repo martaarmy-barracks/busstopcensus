@@ -44,9 +44,13 @@ To clone this repository onto your local environment, follow these steps:
 ### Required Packages
 R is an extensible system where people can share useful code in the form of *packages*. All the packages required for this project will load in the `.Rprofile` file upon opening the project. All you need to do is install the packages. Run the code below to install all of the required packages:
 ```
-pkgs <- c("chron", "data.table", "dplyr", "ggplot2", # package names
-            "here", "jsonlite", "leaflet", "tidyr")
+pkgs <- c("chron", "data.table", "dplyr", "geosphere", "ggplot2", # package names
+           "googlesheets4", "here", "jsonlite", "leaflet", 
+           "maps", "stringdist", "stringr", "tidyr")
 install.packages(pkgs, dependencies = TRUE) # install packages
+
+library(devtools)
+install_github('mhudecheck/revgeo')
 ```
 
 ### Further Resources
@@ -75,6 +79,9 @@ The repository is organized into the following structure (as suggested [here](ht
 - .RProfile
 - data/
   - raw_data/
+    - gtfs/
+    - survey/
+    - validation/
   - tidy_data/
   - codebook.md
 - code/
@@ -106,7 +113,108 @@ This folder contains the raw data used in the analysis. The raw data means it:
 - The data was not summarized in any way
 
 ### data/processed_data
-This folder contains cleaned and validated data. This is the data that will be used as the starting point for all Bus Stop Census analyses.
+This folder contains cleaned and validated data. This is the data that will be used as the starting point for all Bus Stop Census analyses. The 
+The following is a list of all the fields and the question they match with or description if not related to a survey question:
+- **Record_ID**
+  - This is a unique ID number given to all survey responses. This record ID is used to identify specific responses during the cleaning process.
+- **Stop_ID**
+  - This is the Stop ID the survey is submitted for. Most Stop IDs are prefilled by the Bus Stop Census online surveying platform.
+- **Stop_Lat**
+  - Latitude of the bus stop from GTFS data
+- **Stop_Lon**
+  - Longitude of the bus stop from GTFS data
+- **Timestamp**
+- **Email_Masked**
+  - What is your email address?
+    - The real emails have been masked to protect the privacy of the surveyor.
+- **Main_Street**
+  - What street or road is the bus stop located on?
+    - The main street is the street the route runs along. In other words, it is the street the bus drives on. This field is prefilled by the Bus Stop Census online surveying platform.
+- **Nearest_Landmark**
+  - What is the nearest cross street or landmark?
+    - This field can either be a nearby landmark/address or a cross street that runs perpendicular to the main street. This field is prefilled by the Bus Stop Census online surveying platform.
+- **Routes**
+  - What routes serve this bus stop?
+    - This field is prefilled by the Bus Stop Census online surveying platform.
+- **Direction** 
+  - What direction is the bus heading from this stop?
+- **Seating**
+  - Does the stop have a bench or other seating?
+- **Shelter**
+  - Does this stop have a shelter?
+- **Trash_Can**
+  - Does this bus stop include a trash can?
+- **Litter**
+  - Does the bus stop have any of these cleanliness issues? *Litter at the stop*
+- **Grafitti**
+  - Does the bus stop have any of these cleanliness issues? *Graffiti (unauthorized) or tagging on bus stop amenities*
+- **Overflow**
+  - Does the bus stop have any of these cleanliness issues? *Overflowing or poorly maintained trash can*
+- **Dirty_Seating**
+  - Does the bus stop have any of these cleanliness issues? *Dirty seating area*
+- **Other**
+  - Does the bus stop have any of these cleanliness issues? *Other*
+- **Line_of_Sight**
+  - If you had to flag the bus down, would you have to step into the roadway or lean into traffic?
+- **Route_Number**
+  - What wayfinding information is present at the stop? Select all that apply. *Route Numbers*
+- **Route_Schedule**
+  - What wayfinding information is present at the stop? Select all that apply. *Route Schedule*
+- **Route_Map**
+  - What wayfinding information is present at the stop? Select all that apply. *Route Map*
+- **Customer_Service**
+  - What wayfinding information is present at the stop? Select all that apply. *Customer Service Contact Information*
+- **None_Of_The_Above**	
+  - What wayfinding information is present at the stop? Select all that apply. *None of the above*
+- **Wayfinding Accessbility**
+  - Is the wayfinding information  located at the eye level of a person using a wheelchair?
+- **Lighting**
+  - Is the stop well lit at night?
+- **Sidewalk**
+  - Is there a paved sidewalk to the boarding area of the bus?
+- **Obstacles**
+  - Are there any obstacles at or on the path to this bus stop that would limit the mobility of a person using a wheelchair or stroller?
+- **Obstacle_Desc**
+  - If there are obstacles, please briefly describe them.
+- **Boarding_Area**
+  - What is the surface of the boarding area?
+- **Main_Street_Crosswalk**
+  - Is there a clearly painted crosswalk within 100 feet of the bus stop? (Select all that apply.) *Yes, on the main street*
+- **Cross_Street_Crosswalk**
+  - Is there a clearly painted crosswalk within 100 feet of the bus stop? (Select all that apply.) *Yes, on the cross street*
+- **Worn_Faded**
+  - Is there a clearly painted crosswalk within 100 feet of the bus stop? (Select all that apply.) *Yes, and crosswalk paint is faded or worn away*
+- **No_Crosswalk**
+  - Is there a clearly painted crosswalk within 100 feet of the bus stop? (Select all that apply.) *No, no painted crosswalk within 100 feet*
+- **Traffic_Light**
+  - What features does the crosswalk(s) have? Select all that apply. *Traffic Light*
+- **Curb_Cuts**
+  - What features does the crosswalk(s) have? Select all that apply. *Curb cuts for wheelchairs*
+- **Crosswalk_Signals**
+  - What features does the crosswalk(s) have? Select all that apply. *Crosswalk signals with push button*
+- **Crossing_Audio**
+  - What features does the crosswalk(s) have? Select all that apply. *Crossing audio overlays for visually impaired*
+- **Tactile_Guide**
+  - What features does the crosswalk(s) have? Select all that apply. *Tactile guide strips for visually impaired*
+- **Informal_Pathways**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *Pedestrians using informal pathways where sidewalks do not exist*
+- **Compete_For_Seat**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *Pedestrians competing for seating at the bus stop*
+- **Cross_Midblock**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *Pedestrians crossing the roadway at midblock locations*
+- **Catch_The_Bus**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *Pedestrians running across roadways to catch the bus*
+- **Dangerous_Motorists**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *Dangerous motorist behavior around bus stop (e.g., speeding or not yielding to pedestrians)*
+- **First_Visit**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *None of the above (first visit to this stop)*
+- **Regular_User_None**
+  - Have you observed any of the following pedestrian behavior at this stop? Select all that apply *None of the above (occasional or frequent user of this stop)*
+- **On_Site_Survey**
+  - Did you complete this survey at the physical location of the bus stop?
+- **Additional_Comments**	
+  - Do you have any additional observations or anecdotes for this bus stop?
+
 
 ### data/codebook.md
 This is a document detailing the survey design and the methods of data collection.

@@ -1,8 +1,9 @@
 
   ## LOAD LIBRARIES -------------------------------------------------------------------------------------------------
   pkgs <- c("chron", "data.table", "dplyr", "geosphere", "ggplot2", # package names
-            "googlesheets4", "here", "jsonlite", "leaflet", 
-            "maps", "revgeo", "stringdist", "stringr", "tidyr")
+            "googlesheets4", "here", "jsonlite", "leaflet", "maps",
+            "openxlsx", "revgeo", "stringdist", "stringr", "tidyr")
+
   
   inst = lapply(pkgs, library, character.only = TRUE) # load packages
   
@@ -77,6 +78,7 @@
                                                   dplyr::summarise(Routes = paste(route_short_name, collapse = ", "),
                                                                    Direction = paste(Direction, collapse = ", "))
   
+
   rm(gtfs_dec_2020_df_list)
   rm(route_data_2020)
   
