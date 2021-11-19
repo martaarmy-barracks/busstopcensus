@@ -62,7 +62,6 @@
                                                              Direction = paste(Direction, collapse = ", "))
   
   rm(gtfs_dec_2019_df_list)
-  rm(route_data_2019)
   
   route_data_2020 <- gtfs_dec_2020_df_list[[7]]
   stop_route_summary_2020 <- route_data_2020 %>% distinct(stop_id,
@@ -91,6 +90,7 @@
            lon_diff = ifelse(stop_lon.x != stop_lon.y, "FLAG", ""),
            coord_dist = distm(c(stop_lon.x,stop_lat.x), c(stop_lon.y, stop_lat.y), fun = distHaversine)) 
   
+  # Create final list of all stops with associated detail present in the 2019-12-06 and 2020-12-04 data feeds
   final_stop_list <- stop_comparison_data %>%
     mutate(Stop_Name = ifelse(is.na(stop_name.x), stop_name.y, stop_name.x),
            Stop_Lat = ifelse(is.na(stop_lat.x), stop_lat.y, stop_lat.x),
@@ -101,3 +101,8 @@
     separate(Stop_Name, c("Main_Street_or_Station", "Cross_Street"), sep = "@") %>%
     mutate(Main_Street_or_Station = trimws(Main_Street_or_Station),
            Cross_Street = trimws(Cross_Street))
+
+  # Export the table of all stops in the GTFS data feeds for use in collecting geospatial labels for county and city
+  #write.csv(final_stop_list, paste(here::here("data", "raw_data", "gtfs"),"full_gtfs_stop_list.csv", sep = "/"))
+  
+  
