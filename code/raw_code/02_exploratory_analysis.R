@@ -1,10 +1,10 @@
 
   ######################### IMPORT DATA ######################### 
-  # Survey Responses
+  # Import Survey Responses
   survey_df <- read.csv(here("data", "tidy_data", "pre_processed_survey_df.csv"))
   survey_df$Stop_ID <- as.character(survey_df$Stop_ID)
   
-  # Ridership Data
+  # Import Ridership Data
   pre_covid_weekday <- read.xlsx(
     here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
     sheet = "Nov 1-15, 2019_Wkdy",
@@ -13,7 +13,10 @@
     rowNames = FALSE
   ) %>%
     rename(Pre_COVID_Weekday_Boardings = Ons,
-           Pre_COVID_Weekday_Alightings = Offs) 
+           Pre_COVID_Weekday_Alightings = Offs) %>%
+    group_by(Route, Direction, Stop.ID, Stop.Name) %>%
+    summarize(Pre_COVID_Weekday_Boardings = sum(Pre_COVID_Weekday_Boardings, na.rm = TRUE),
+              Pre_COVID_Weekday_Alightings = sum(Pre_COVID_Weekday_Alightings, na.rm = TRUE)) 
   
   pre_covid_saturday <- read.xlsx(
     here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
@@ -23,7 +26,10 @@
     rowNames = FALSE
   ) %>%
     rename(Pre_COVID_Saturday_Boardings = Ons,
-           Pre_COVID_Saturday_Alightings = Offs) 
+           Pre_COVID_Saturday_Alightings = Offs) %>%
+    group_by(Route, Direction, Stop.ID, Stop.Name) %>%
+    summarize(Pre_COVID_Saturday_Boardings = sum(Pre_COVID_Saturday_Boardings, na.rm = TRUE),
+              Pre_COVID_Saturday_Alightings = sum(Pre_COVID_Saturday_Alightings, na.rm = TRUE))
   
   pre_covid_sunday <- read.xlsx(
     here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
@@ -33,7 +39,11 @@
     rowNames = FALSE
   ) %>%
     rename(Pre_COVID_Sunday_Boardings = Ons,
-           Pre_COVID_Sunday_Alightings = Offs) 
+           Pre_COVID_Sunday_Alightings = Offs) %>%
+    group_by(Route, Direction, Stop.ID, Stop.Name) %>%
+    summarize(Pre_COVID_Sunday_Boardings = sum(Pre_COVID_Sunday_Boardings, na.rm = TRUE),
+              Pre_COVID_Sunday_Alightings = sum(Pre_COVID_Sunday_Alightings, na.rm = TRUE))
+    
   
   post_covid_weekday <- read.xlsx(
     here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
@@ -43,7 +53,10 @@
     rowNames = FALSE
   ) %>%
     rename(Post_COVID_Weekday_Boardings = Ons,
-           Post_COVID_Weekday_Alightings = Offs) 
+           Post_COVID_Weekday_Alightings = Offs) %>%
+    group_by(Route, Direction, Stop.ID, Stop.Name) %>%
+    summarize(Post_COVID_Weekday_Boardings = sum(Post_COVID_Weekday_Boardings, na.rm = TRUE),
+              Post_COVID_Weekday_Alightings = sum(Post_COVID_Weekday_Alightings, na.rm = TRUE)) 
   
   post_covid_saturday <- read.xlsx(
     here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
@@ -53,7 +66,10 @@
     rowNames = FALSE
   ) %>%
     rename(Post_COVID_Saturday_Boardings = Ons,
-           Post_COVID_Saturday_Alightings = Offs) 
+           Post_COVID_Saturday_Alightings = Offs) %>%
+    group_by(Route, Direction, Stop.ID, Stop.Name) %>%
+    summarize(Post_COVID_Saturday_Boardings = sum(Post_COVID_Saturday_Boardings, na.rm = TRUE),
+              Post_COVID_Saturday_Alightings = sum(Post_COVID_Saturday_Alightings, na.rm = TRUE))
   
   post_covid_sunday <- read.xlsx(
     here("data", "raw_data", "supplemental", "Average Weekday Saturday Sunday Stop Activity_November 1-15_2019-2020_MARTA Army.xlsx"),
@@ -63,16 +79,18 @@
     rowNames = FALSE
   ) %>%
     rename(Post_COVID_Sunday_Boardings = Ons,
-           Post_COVID_Sunday_Alightings = Offs)
+           Post_COVID_Sunday_Alightings = Offs) %>%
+    group_by(Route, Direction, Stop.ID, Stop.Name) %>%
+    summarize(Post_COVID_Sunday_Boardings = sum(Post_COVID_Sunday_Boardings, na.rm = TRUE),
+              Post_COVID_Sunday_Alightings = sum(Post_COVID_Sunday_Alightings, na.rm = TRUE))
   
+  # Join ridership data for weekdays, Saturday, and Sunday
   boarding_alighting_df <- pre_covid_weekday %>% 
     full_join(pre_covid_saturday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
     full_join(pre_covid_sunday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
     full_join(post_covid_weekday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
     full_join(post_covid_saturday, by = c("Route", "Direction", "Stop.ID", "Stop.Name")) %>%
     full_join(post_covid_sunday, by = c("Route", "Direction", "Stop.ID", "Stop.Name"))
-  
-  
   
   rm(pre_covid_weekday)
   rm(pre_covid_saturday)
@@ -82,14 +100,14 @@
   rm(post_covid_sunday)
   
   boarding_alighting_summary <- boarding_alighting_df %>%
-      mutate(Total_Weekly_Avg_Pre_COVID_Boardings = Pre_COVID_Weekday_Boardings + Pre_COVID_Saturday_Boardings + Pre_COVID_Sunday_Boardings,
-             Total_Weekly_Avg_Pre_COVID_Alightings = Pre_COVID_Weekday_Alightings + Pre_COVID_Saturday_Alightings + Pre_COVID_Sunday_Alightings,
-             Total_Weekly_Avg_Pre_COVID_Ons_Offs = Pre_COVID_Weekday_Boardings + Pre_COVID_Saturday_Boardings + Pre_COVID_Sunday_Boardings +
-                                                       Pre_COVID_Weekday_Alightings + Pre_COVID_Saturday_Alightings + Pre_COVID_Sunday_Alightings,
-             Total_Weekly_Avg_Post_COVID_Boardings = Post_COVID_Weekday_Boardings + Post_COVID_Saturday_Boardings + Post_COVID_Sunday_Boardings,
-             Total_Weekly_Avg_Post_COVID_Alightings = Post_COVID_Weekday_Alightings + Post_COVID_Saturday_Alightings + Post_COVID_Sunday_Alightings,
-             Total_Weekly_Avg_Post_COVID_Ons_Offs = Post_COVID_Weekday_Boardings + Post_COVID_Saturday_Boardings + Post_COVID_Sunday_Boardings +
-                                                       Post_COVID_Weekday_Alightings + Post_COVID_Saturday_Alightings + Post_COVID_Sunday_Alightings) %>%
+      mutate(Total_Weekly_Avg_Pre_COVID_Boardings = (Pre_COVID_Weekday_Boardings * 5) + Pre_COVID_Saturday_Boardings + Pre_COVID_Sunday_Boardings,
+             Total_Weekly_Avg_Pre_COVID_Alightings = (Pre_COVID_Weekday_Alightings * 5) + Pre_COVID_Saturday_Alightings + Pre_COVID_Sunday_Alightings,
+             Total_Weekly_Avg_Pre_COVID_Ons_Offs = (Pre_COVID_Weekday_Boardings * 5) + Pre_COVID_Saturday_Boardings + Pre_COVID_Sunday_Boardings +
+                                                       (Pre_COVID_Weekday_Alightings * 5) + Pre_COVID_Saturday_Alightings + Pre_COVID_Sunday_Alightings,
+             Total_Weekly_Avg_Post_COVID_Boardings = (Post_COVID_Weekday_Boardings * 5) + Post_COVID_Saturday_Boardings + Post_COVID_Sunday_Boardings,
+             Total_Weekly_Avg_Post_COVID_Alightings = (Post_COVID_Weekday_Alightings * 5) + Post_COVID_Saturday_Alightings + Post_COVID_Sunday_Alightings,
+             Total_Weekly_Avg_Post_COVID_Ons_Offs = (Post_COVID_Weekday_Boardings * 5) + Post_COVID_Saturday_Boardings + Post_COVID_Sunday_Boardings +
+                                                       (Post_COVID_Weekday_Alightings * 5) + Post_COVID_Saturday_Alightings + Post_COVID_Sunday_Alightings) %>%
     select(Stop.ID, Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
            Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
            Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
@@ -101,10 +119,13 @@
               Total_Weekly_Avg_Post_COVID_Alightings = sum(Total_Weekly_Avg_Post_COVID_Alightings, na.rm = TRUE),
               Total_Weekly_Avg_Post_COVID_Ons_Offs = sum(Total_Weekly_Avg_Post_COVID_Ons_Offs, na.rm = TRUE))
   
+  # Convert Stop ID to a character to join with survey data
   boarding_alighting_summary$Stop.ID <- as.character(boarding_alighting_summary$Stop.ID)
   
-  duplicate_stops <- boarding_alighting_summary[duplicated(boarding_alighting_summary$Stop.ID), ]
+  # Check for duplicate stops
+  #duplicate_stops <- boarding_alighting_summary[duplicated(boarding_alighting_summary$Stop.ID), ]
   
+  # Join survey data to ridership data by Stop ID
   survey_df <- survey_df %>%
     inner_join(boarding_alighting_summary, by = c("Stop_ID" = "Stop.ID")) 
   
@@ -292,9 +313,16 @@
     summarize(Total_Surveyed = n()) %>%
     mutate(Email_Masked = ifelse(Email_Masked == "", "Not Specified", Email_Masked))
   
+  ## Percent of Total Avg Weekly Boardings and Alightings
+  ridership_percentage <- survey_df %>%
+    select(Stop_ID, Record_ID) %>%
+    full_join(boarding_alighting_summary, by = c("Stop_ID" = "Stop.ID")) %>%
+    mutate(In_Survey = ifelse(is.na(Record_ID), "Not In Survey", "In Survey")) %>%
+    group_by(In_Survey) %>%
+    summarize(Total_Weekly_Ons_Offs = sum(Total_Weekly_Avg_Pre_COVID_Ons_Offs, na.rm = TRUE))
+  
   ## Routes Survey Completion
   route_stop_list <- route_data_2019 %>% distinct(route_short_name, route_long_name, stop_id) #%>%
-  
   
   distinct_stop_list <- survey_df %>% distinct(Stop_ID) %>%
     mutate(Stop_ID_Join_Key = Stop_ID)
@@ -324,50 +352,46 @@
   
   
   # Calculating County Percentages
-  county_results <- final_stop_list %>% left_join(distinct_stop_list, by = c("stop_id"="Stop_ID"), keep = TRUE) %>%
-    select(stop_id, Stop_ID_Join_Key, Stop_Lat, Stop_Lon) %>%
-    mutate(County = map.where(database="county", 
-                              Stop_Lon, Stop_Lat),
-           County = case_when(
-             County == "georgia,fulton" ~ "Fulton",
-             County == "georgia,de kalb" ~ "Dekalb",
-             County == "georgia,clayton" ~ "Clayton",
-             County == "georgia,douglas" ~ "Douglas",
-             County == "georgia,gwinnett" ~ "Gwinnett",
-             County == "georgia,cobb" ~ "Cobb",
-             TRUE ~ ""),
+  full_stop_list_city_county_df <- read.csv(here("data", "raw_data", "supplemental", "gtfs_counties_cities.csv"))
+  full_stop_list_city_county_df$stop_id <- as.character(full_stop_list_city_county_df$stop_id)
+  jurisdiction_results <- full_stop_list_city_county_df %>% left_join(distinct_stop_list, by = c("stop_id"="Stop_ID"), keep = TRUE) %>%
+    rename("County" = "NAME",
+           "City_Neighborhood" = "NAME_1") %>%
+    select(stop_id, County, City_Neighborhood, Stop_ID_Join_Key, Stop_Lat, Stop_Lon) %>%
+    mutate(MARTA_Jurisdiction = ifelse(City_Neighborhood == "Atlanta", "Atlanta", 
+                                        ifelse(County == "Fulton" | County == "DeKalb" | County == "Clayton", County, "Other")),
            Stop_Surveyed = ifelse(is.na(Stop_ID_Join_Key), 0, 1)) %>%
-    group_by(County) %>%
+    group_by(MARTA_Jurisdiction) %>%
     summarize(Total_Stops = n(),
               Total_Surveyed = sum(Stop_Surveyed),
               Percent_Surveyed = sum(Stop_Surveyed) / n())
   
   df_list <- list(total_surveys, goal_summary, route_stops_surveyed,
-                  total_stops_essential, county_results)
+                  total_stops_essential, jurisdiction_results)
   wb <- writeDataToExcel(df_list, wb, "Survey Statistics")
   
   # Seating
   seating <- summaryTableCreator(survey_df, "Seating", NA)
-  seating_by_county <- summaryTableCreator(survey_df, "Seating", "County")
-  seating_by_city <- summaryTableCreator(survey_df, "Seating", "City")
+  seating_by_jurisdiction <- summaryTableCreator(survey_df, "Seating", "MARTA_Jurisdiction")
+  seating_by_city_neighborhood <- summaryTableCreator(survey_df, "Seating", "City_Neighborhood")
   
-  df_list <- list(seating, seating_by_county, seating_by_city)
+  df_list <- list(seating, seating_by_jurisdiction, seating_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Seating")
   
   # Shelter
   shelter <- summaryTableCreator(survey_df, "Shelter", NA)
-  shelter_by_county <- summaryTableCreator(survey_df, "Shelter", "County")
-  shelter_by_city <- summaryTableCreator(survey_df, "Shelter", "City")
+  shelter_by_jurisdiction <- summaryTableCreator(survey_df, "Shelter", "MARTA_Jurisdiction")
+  shelter_by_city_neighborhood <- summaryTableCreator(survey_df, "Shelter", "City_Neighborhood")
   
-  df_list <- list(shelter, shelter_by_county, shelter_by_city)
+  df_list <- list(shelter, shelter_by_jurisdiction, shelter_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Shelter")
   
   # Trash Can
   trash_can <- summaryTableCreator(survey_df, "Trash_Can", NA)
-  trash_can_by_county <- summaryTableCreator(survey_df, "Trash_Can", "County")
-  trash_can_by_city <- summaryTableCreator(survey_df, "Trash_Can", "City")
+  trash_can_by_jurisdiction <- summaryTableCreator(survey_df, "Trash_Can", "MARTA_Jurisdiction")
+  trash_can_by_city_neighborhood <- summaryTableCreator(survey_df, "Trash_Can", "City_Neighborhood")
   
-  df_list <- list(trash_can, trash_can_by_county, trash_can_by_city)
+  df_list <- list(trash_can, trash_can_by_jurisdiction, trash_can_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Trash Can")
   
   ## Cleanliness
@@ -391,9 +415,9 @@
     ungroup() %>%
     mutate(Percent_Total = format(Survey_Count / sum(Survey_Count), digits = 2))
   
-  cleanliness_by_county <- survey_df %>% 
-    select(County, Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
-    group_by(County) %>%
+  cleanliness_by_jurisdiction <- survey_df %>% 
+    select(MARTA_Jurisdiction, Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
+    group_by(MARTA_Jurisdiction) %>%
     summarize(Litter = sum(Litter == "Yes"),
               Grafitti = sum(Grafitti == "Yes"),
               Overflow = sum(Overflow == "Yes"),
@@ -401,9 +425,9 @@
               Other = sum(Other == "Yes"),
               Total_Surveys = n()) 
    
-  cleanliness_by_city <- survey_df %>% 
-    select(City, Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
-    group_by(City) %>%
+  cleanliness_by_city_neighborhood <- survey_df %>% 
+    select(City_Neighborhood, Litter, Grafitti, Overflow, Dirty_Seating, Other) %>%
+    group_by(City_Neighborhood) %>%
     summarize(Litter = sum(Litter == "Yes"),
               Grafitti = sum(Grafitti == "Yes"),
               Overflow = sum(Overflow == "Yes"),
@@ -411,40 +435,40 @@
               Other = sum(Other == "Yes"),
               Total_Surveys = n())
   
-  df_list <- list(cleanliness, litter_with_trash_can, cleanliness_by_county, cleanliness_by_city)
+  df_list <- list(cleanliness, litter_with_trash_can, cleanliness_by_jurisdiction, cleanliness_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Cleanliness")
   
   ## Line of Sight
   line_of_sight <- simpleSummaryTableCreator(survey_df, "Line_of_Sight", NA)
-  line_of_sight_by_county <- simpleSummaryTableCreator(survey_df, "Line_of_Sight", "County")
-  line_of_sight_by_city <- simpleSummaryTableCreator(survey_df, "Line_of_Sight", "City")
+  line_of_sight_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Line_of_Sight", "MARTA_Jurisdiction")
+  line_of_sight_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Line_of_Sight", "City_Neighborhood")
 
-  df_list <- list(line_of_sight, line_of_sight_by_county, line_of_sight_by_city)
+  df_list <- list(line_of_sight, line_of_sight_by_jurisdiction, line_of_sight_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Line of Sight")
   
   ## Wayfinding
   # Route Number
   route_number <- summaryTableCreator(survey_df, "Route_Number", NA)
-  route_number_by_county <- summaryTableCreator(survey_df, "Route_Number", "County")
-  route_number_by_city <- summaryTableCreator(survey_df, "Route_Number", "City")
+  route_number_by_jurisdiction <- summaryTableCreator(survey_df, "Route_Number", "MARTA_Jurisdiction")
+  route_number_by_city_neighborhood <- summaryTableCreator(survey_df, "Route_Number", "City_Neighborhood")
   
-  df_list <- list(route_number, route_number_by_county, route_number_by_city)
+  df_list <- list(route_number, route_number_by_jurisdiction, route_number_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Route Number")
   
   # Route Schedule
   route_schedule <- summaryTableCreator(survey_df, "Route_Schedule", NA)
-  route_schedule_by_county <- summaryTableCreator(survey_df, "Route_Schedule", "County")
-  route_schedule_by_city <- summaryTableCreator(survey_df, "Route_Schedule", "City")
+  route_schedule_by_jurisdiction <- summaryTableCreator(survey_df, "Route_Schedule", "MARTA_Jurisdiction")
+  route_schedule_by_city_neighborhood <- summaryTableCreator(survey_df, "Route_Schedule", "City_Neighborhood")
   
-  df_list <- list(route_schedule, route_schedule_by_county, route_schedule_by_city)
+  df_list <- list(route_schedule, route_schedule_by_jurisdiction, route_schedule_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Route Schedule")
   
   # Route Map
   route_map <- summaryTableCreator(survey_df, "Route_Map", NA)
-  route_map_by_county <- summaryTableCreator(survey_df, "Route_Map", "County")
-  route_map_by_city <- summaryTableCreator(survey_df, "Route_Map", "City")
+  route_map_by_jurisdiction <- summaryTableCreator(survey_df, "Route_Map", "MARTA_Jurisdiction")
+  route_map_by_city_neighborhood <- summaryTableCreator(survey_df, "Route_Map", "City_Neighborhood")
   
-  df_list <- list(route_map, route_map_by_county, route_map_by_city)
+  df_list <- list(route_map, route_map_by_jurisdiction, route_map_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Route Map")
   
   # Wayfinding By Category
@@ -462,7 +486,7 @@
                             select(Wayfinding_Option, Count, Percent_Total)
   
   wayfinding_detail <- survey_df %>% 
-    distinct(Stop_ID, City, County, Shelter, Route_Number, Route_Schedule, Route_Map, Customer_Service,
+    distinct(Stop_ID, City_Neighborhood, County, MARTA_Jurisdiction, Shelter, Route_Number, Route_Schedule, Route_Map, Customer_Service,
              Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
              Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
              Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
@@ -484,17 +508,17 @@
   wayfinding_detail <- wayfinding_detail %>% select(-Shelter)
   
   wayfinding_category <- summaryTableCreator(wayfinding_detail, "Wayfinding_Category", NA)
-  wayfinding_category_by_county <- summaryTableCreator(wayfinding_detail, "Wayfinding_Category", "County")
-  wayfinding_category_by_city <- summaryTableCreator(wayfinding_detail, "Wayfinding_Category", "City")
+  wayfinding_category_by_jurisdiction <- summaryTableCreator(wayfinding_detail, "Wayfinding_Category", "MARTA_Jurisdiction")
+  wayfinding_category_by_city_neighborhood <- summaryTableCreator(wayfinding_detail, "Wayfinding_Category", "City_Neighborhood")
   
-  df_list <- list(wayfinding_category, wayfinding_category_by_county, wayfinding_category_by_city)
+  df_list <- list(wayfinding_category, wayfinding_category_by_jurisdiction, wayfinding_category_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Wayfinding by Category")
 
   #Wayfinding Summary
-  wayfinding_by_county <- survey_df %>% 
-    distinct(Stop_ID, County, Route_Number, Route_Schedule, Route_Map,
+  wayfinding_by_jurisdiction <- survey_df %>% 
+    distinct(Stop_ID, MARTA_Jurisdiction, Route_Number, Route_Schedule, Route_Map,
            Customer_Service, None_Of_The_Above) %>%
-    group_by(County) %>%
+    group_by(MARTA_Jurisdiction) %>%
     summarize(Route_Number = sum(Route_Number == "Yes"),
               Route_Schedule = sum(Route_Schedule == "Yes"),
               Route_Map = sum(Route_Map == "Yes"),
@@ -502,10 +526,10 @@
               None_Of_The_Above = sum(None_Of_The_Above == "Yes"),
               Total_Stops = n())
   
-  wayfinding_by_city <- survey_df %>% 
-    distinct(Stop_ID, City, Route_Number, Route_Schedule, Route_Map,
+  wayfinding_by_city_neighborhood <- survey_df %>% 
+    distinct(Stop_ID, City_Neighborhood, Route_Number, Route_Schedule, Route_Map,
            Customer_Service, None_Of_The_Above) %>%
-    group_by(City) %>%
+    group_by(City_Neighborhood) %>%
     summarize(Route_Number = sum(Route_Number == "Yes"),
               Route_Schedule = sum(Route_Schedule == "Yes"),
               Route_Map = sum(Route_Map == "Yes"),
@@ -513,91 +537,91 @@
               None_Of_The_Above = sum(None_Of_The_Above == "Yes"),
               Total_Stops = n())
   
-  df_list <- list(wayfinding_by_county, wayfinding_by_city)
+  df_list <- list(wayfinding_by_jurisdiction, wayfinding_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Wayfinding Summary")
   
   
   ## Wayfinding Accessibility
   wayfinding_accessibility <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", NA)
-  wayfinding_accessibility_by_county <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", "County")
-  wayfinding_accessibility_by_city <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", "City")
+  wayfinding_accessibility_by_jurisdiction <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", "MARTA_Jurisdiction")
+  wayfinding_accessibility_by_city_neighborhood <- summaryTableCreator(survey_df, "Wayfinding_Accessibility", "City_Neighborhood")
   
-  df_list <- list(wayfinding_accessibility, wayfinding_accessibility_by_county, wayfinding_accessibility_by_city)
+  df_list <- list(wayfinding_accessibility, wayfinding_accessibility_by_jurisdiction, wayfinding_accessibility_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Wayfinding Accessibility")
   
   ## Lighting
   lighting <- simpleSummaryTableCreator(survey_df, "Lighting", NA)
-  lighting_by_county <- simpleSummaryTableCreator(survey_df, "Lighting", "County")
-  lighting_by_city <- simpleSummaryTableCreator(survey_df, "Lighting", "City")
+  lighting_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Lighting", "MARTA_Jurisdiction")
+  lighting_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Lighting", "City_Neighborhood")
   
-  df_list <- list(lighting, lighting_by_county, lighting_by_city)
+  df_list <- list(lighting, lighting_by_jurisdiction, lighting_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Lighting")
   
   ## Sidewalks
   sidewalk <- summaryTableCreator(survey_df, "Sidewalk", NA)
-  sidewalk_by_county <- summaryTableCreator(survey_df, "Sidewalk", "County")
-  sidewalk_by_city <- summaryTableCreator(survey_df, "Sidewalk", "City")  
+  sidewalk_by_jurisdiction <- summaryTableCreator(survey_df, "Sidewalk", "MARTA_Jurisdiction")
+  sidewalk_by_city_neighborhood <- summaryTableCreator(survey_df, "Sidewalk", "City_Neighborhood")  
   
-  df_list <- list(sidewalk, sidewalk_by_county, sidewalk_by_city)
+  df_list <- list(sidewalk, sidewalk_by_jurisdiction, sidewalk_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Sidewalks")
   
   ## Obstacles
   obstacles <- simpleSummaryTableCreator(survey_df, "Obstacles", NA)
-  obstacles_by_county <- simpleSummaryTableCreator(survey_df, "Obstacles", "County")
-  obstacles_by_city <- simpleSummaryTableCreator(survey_df, "Obstacles", "City")
+  obstacles_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Obstacles", "MARTA_Jurisdiction")
+  obstacles_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Obstacles", "City_Neighborhood")
    
   obstacles_description <- survey_df %>% 
     distinct(Stop_ID, Main_Street_or_Station, Nearest_Landmark, County,
-             City, Routes, Direction, Obstacles, Obstacle_Desc) %>%
+             City_Neighborhood, MARTA_Jurisdiction, Routes, Direction, Obstacles, Obstacle_Desc) %>%
     dplyr::filter(Obstacles == "Yes", Obstacle_Desc != "")
   
-  df_list <- list(obstacles, obstacles_by_county, obstacles_by_city)
+  df_list <- list(obstacles, obstacles_by_jurisdiction, obstacles_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Obstacles")
   writeData(wb, "Obstacle Descriptions", obstacles_description, startCol = 1, startRow = 1, colNames = TRUE)
   
   ## Boarding Areas
   boarding_area <- summaryTableCreator(survey_df, "Boarding_Area", NA)
-  boarding_area_by_county <- summaryTableCreator(survey_df, "Boarding_Area", "County")
-  boarding_area_by_city <- summaryTableCreator(survey_df, "Boarding_Area", "City")
+  boarding_area_by_jurisdiction <- summaryTableCreator(survey_df, "Boarding_Area", "MARTA_Jurisdiction")
+  boarding_area_by_city_neighborhood <- summaryTableCreator(survey_df, "Boarding_Area", "City_Neighborhood")
   
-  df_list <- list(boarding_area, boarding_area_by_county, boarding_area_by_city)
+  df_list <- list(boarding_area, boarding_area_by_jurisdiction, boarding_area_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Boarding Area")
   
   ## Crosswalks
   # Main Street Crosswalk
   main_street_crosswalk <- summaryTableCreator(survey_df, "Main_Street_Crosswalk", NA)
-  main_street_crosswalk_by_county <- summaryTableCreator(survey_df, "Main_Street_Crosswalk", "County")
-  main_street_crosswalk_by_city <- summaryTableCreator(survey_df, "Main_Street_Crosswalk", "City")
+  main_street_crosswalk_by_jurisdiction <- summaryTableCreator(survey_df, "Main_Street_Crosswalk", "MARTA_Jurisdiction")
+  main_street_crosswalk_by_city_neighborhood <- summaryTableCreator(survey_df, "Main_Street_Crosswalk", "City_Neighborhood")
   
-  df_list <- list(main_street_crosswalk, main_street_crosswalk_by_county, main_street_crosswalk_by_city)
+  df_list <- list(main_street_crosswalk, main_street_crosswalk_by_jurisdiction, main_street_crosswalk_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Main Street Crosswalk")
   
   # Cross Street Crosswalk
   cross_street_crosswalk <- summaryTableCreator(survey_df, "Cross_Street_Crosswalk", NA)
-  cross_street_crosswalk_by_county <- summaryTableCreator(survey_df, "Cross_Street_Crosswalk", "County")
-  cross_street_crosswalk_by_city <- summaryTableCreator(survey_df, "Cross_Street_Crosswalk", "City")
+  cross_street_crosswalk_by_jurisdiction <- summaryTableCreator(survey_df, "Cross_Street_Crosswalk", "MARTA_Jurisdiction")
+  cross_street_crosswalk_by_city_neighborhood <- summaryTableCreator(survey_df, "Cross_Street_Crosswalk", "City_Neighborhood")
   
-  df_list <- list(cross_street_crosswalk, cross_street_crosswalk_by_county, cross_street_crosswalk_by_city)
+  df_list <- list(cross_street_crosswalk, cross_street_crosswalk_by_jurisdiction, cross_street_crosswalk_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Cross Street Crosswalk")
   
   # Worn and Faded Crosswalk
   worn_faded <- summaryTableCreator(survey_df, "Worn_Faded", NA)
-  worn_faded_by_county <- summaryTableCreator(survey_df, "Worn_Faded", "County")
-  worn_faded_by_city <- summaryTableCreator(survey_df, "Worn_Faded", "City")
+  worn_faded_by_jurisdiction <- summaryTableCreator(survey_df, "Worn_Faded", "MARTA_Jurisdiction")
+  worn_faded_by_city_neighborhood <- summaryTableCreator(survey_df, "Worn_Faded", "City_Neighborhood")
   
-  df_list <- list(worn_faded, worn_faded_by_county, worn_faded_by_city)
+  df_list <- list(worn_faded, worn_faded_by_jurisdiction, worn_faded_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Worn or Faded Crosswalk")
   
   # No Crosswalk
   no_crosswalk <- summaryTableCreator(survey_df, "No_Crosswalk", NA)
-  no_crosswalk_by_county <- summaryTableCreator(survey_df, "No_Crosswalk", "County")
-  no_crosswalk_by_city <- summaryTableCreator(survey_df, "No_Crosswalk", "City")
+  no_crosswalk_by_jurisdiction <- summaryTableCreator(survey_df, "No_Crosswalk", "MARTA_Jurisdiction")
+  no_crosswalk_by_city_neighborhood <- summaryTableCreator(survey_df, "No_Crosswalk", "City_Neighborhood")
   
-  df_list <- list(no_crosswalk, no_crosswalk_by_county, no_crosswalk_by_city)
+  df_list <- list(no_crosswalk, no_crosswalk_by_jurisdiction, no_crosswalk_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "No Crosswalk")
   
   crosswalk_detail <- survey_df %>% 
-    distinct(Stop_ID, City, County, Main_Street_Crosswalk, Cross_Street_Crosswalk, Worn_Faded, No_Crosswalk,
+    distinct(Stop_ID, County, City_Neighborhood, MARTA_Jurisdiction, Main_Street_Crosswalk, Cross_Street_Crosswalk, Worn_Faded, No_Crosswalk,
              Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
              Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
              Total_Weekly_Avg_Post_COVID_Ons_Offs) %>%
@@ -607,51 +631,51 @@
                                                      ifelse(Main_Street_Crosswalk == "No" & Cross_Street_Crosswalk == "No", "No Crosswalk", "")))))
   
   crosswalk_category <- summaryTableCreator(crosswalk_detail, "Crosswalk_Category", NA)
-  crosswalk_category_by_county <- summaryTableCreator(crosswalk_detail, "Crosswalk_Category", "County")
-  crosswalk_category_by_city <- summaryTableCreator(crosswalk_detail, "Crosswalk_Category", "City")
+  crosswalk_category_by_jurisdiction <- summaryTableCreator(crosswalk_detail, "Crosswalk_Category", "MARTA_Jurisdiction")
+  crosswalk_category_by_city_neighborhood <- summaryTableCreator(crosswalk_detail, "Crosswalk_Category", "City_Neighborhood")
   
-  df_list <- list(crosswalk_category, crosswalk_category_by_county, crosswalk_category_by_city)
+  df_list <- list(crosswalk_category, crosswalk_category_by_jurisdiction, crosswalk_category_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Crosswalks Summary")
   
   ## Crosswalk Features
   # Traffic Light
   traffic_light <- summaryTableCreator(survey_df, "Traffic_Light", NA)
-  traffic_light_by_county <- summaryTableCreator(survey_df, "Traffic_Light", "County")
-  traffic_light_by_city <- summaryTableCreator(survey_df, "Traffic_Light", "City")
+  traffic_light_by_jurisdiction <- summaryTableCreator(survey_df, "Traffic_Light", "MARTA_Jurisdiction")
+  traffic_light_by_city_neighborhood <- summaryTableCreator(survey_df, "Traffic_Light", "City_Neighborhood")
   
-  df_list <- list(traffic_light, traffic_light_by_county, traffic_light_by_city)
+  df_list <- list(traffic_light, traffic_light_by_jurisdiction, traffic_light_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Traffic Lights")
   
   # Curb Cuts
   curb_cuts <- summaryTableCreator(survey_df, "Curb_Cuts", NA)
-  curb_cuts_by_county <- summaryTableCreator(survey_df, "Curb_Cuts", "County")
-  curb_cuts_by_city <- summaryTableCreator(survey_df, "Curb_Cuts", "City")
+  curb_cuts_by_jurisdiction <- summaryTableCreator(survey_df, "Curb_Cuts", "MARTA_Jurisdiction")
+  curb_cuts_by_city_neighborhood <- summaryTableCreator(survey_df, "Curb_Cuts", "City_Neighborhood")
   
-  df_list <- list(curb_cuts, curb_cuts_by_county, curb_cuts_by_city)
+  df_list <- list(curb_cuts, curb_cuts_by_jurisdiction, curb_cuts_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Curb Cuts")
   
   # Crosswalk Signals
   crosswalk_signals <- summaryTableCreator(survey_df, "Crosswalk_Signals", NA)
-  crosswalk_signals_by_county <- summaryTableCreator(survey_df, "Crosswalk_Signals", "County")
-  crosswalk_signals_by_city <- summaryTableCreator(survey_df, "Crosswalk_Signals", "City")
+  crosswalk_signals_by_jurisdiction <- summaryTableCreator(survey_df, "Crosswalk_Signals", "MARTA_Jurisdiction")
+  crosswalk_signals_by_city_neighborhood <- summaryTableCreator(survey_df, "Crosswalk_Signals", "City_Neighborhood")
   
-  df_list <- list(crosswalk_signals, crosswalk_signals_by_county, crosswalk_signals_by_city)
+  df_list <- list(crosswalk_signals, crosswalk_signals_by_jurisdiction, crosswalk_signals_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Crosswalk Signals")
   
   # Crossing Audio
   crossing_audio <- summaryTableCreator(survey_df, "Crossing_Audio", NA)
-  crossing_audio_by_county <- summaryTableCreator(survey_df, "Crossing_Audio", "County")
-  crossing_audio_by_city <- summaryTableCreator(survey_df, "Crossing_Audio", "City")
+  crossing_audio_by_jurisdiction <- summaryTableCreator(survey_df, "Crossing_Audio", "MARTA_Jurisdiction")
+  crossing_audio_by_city_neighborhood <- summaryTableCreator(survey_df, "Crossing_Audio", "City_Neighborhood")
   
-  df_list <- list(crossing_audio, crossing_audio_by_county, crossing_audio_by_city)
+  df_list <- list(crossing_audio, crossing_audio_by_jurisdiction, crossing_audio_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Crossing Audio")
   
   #Tactile Guide Strips
   tactile_guide <- summaryTableCreator(survey_df, "Tactile_Guide", NA)
-  tactile_guide_by_county <- summaryTableCreator(survey_df, "Tactile_Guide", "County")
-  tactile_guide_by_city <- summaryTableCreator(survey_df, "Tactile_Guide", "City")
+  tactile_guide_by_jurisdiction <- summaryTableCreator(survey_df, "Tactile_Guide", "MARTA_Jurisdiction")
+  tactile_guide_by_city_neighborhood <- summaryTableCreator(survey_df, "Tactile_Guide", "City_Neighborhood")
   
-  df_list <- list(tactile_guide, tactile_guide_by_county, tactile_guide_by_city)
+  df_list <- list(tactile_guide, tactile_guide_by_jurisdiction, tactile_guide_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Tactile Guide Strips")
   
   crosswalk_features <- survey_df %>% 
@@ -667,10 +691,10 @@
     mutate(Percent_Total = format(Count / Total_Stops, digits = 2)) %>%
     select(Crosswalk_Feature, Count, Total_Stops, Percent_Total)
   
-  crosswalk_features_by_county <- survey_df %>% 
-    distinct(Stop_ID, County, Traffic_Light, Curb_Cuts, Crosswalk_Signals, 
+  crosswalk_features_by_jurisdiction <- survey_df %>% 
+    distinct(Stop_ID, MARTA_Jurisdiction, Traffic_Light, Curb_Cuts, Crosswalk_Signals, 
            Crossing_Audio, Tactile_Guide) %>%
-    group_by(County) %>%
+    group_by(MARTA_Jurisdiction) %>%
     summarize(Traffic_Light = sum(Traffic_Light == "Yes"),
               Curb_Cuts = sum(Curb_Cuts == 'Yes'),
               Crosswalk_Signals = sum(Crosswalk_Signals == "Yes"),
@@ -678,10 +702,10 @@
               Tactile_Guide = sum(Tactile_Guide == "Yes"),
               Total_Stops = n()) 
   
-  crosswalk_features_by_city <- survey_df %>% 
-    distinct(Stop_ID, City, Traffic_Light, Curb_Cuts, Crosswalk_Signals, 
+  crosswalk_features_by_city_neighborhood <- survey_df %>% 
+    distinct(Stop_ID, City_Neighborhood, Traffic_Light, Curb_Cuts, Crosswalk_Signals, 
            Crossing_Audio, Tactile_Guide) %>%
-    group_by(City) %>%
+    group_by(City_Neighborhood) %>%
     summarize(Traffic_Light = sum(Traffic_Light == "Yes"),
               Curb_Cuts = sum(Curb_Cuts == 'Yes'),
               Crosswalk_Signals = sum(Crosswalk_Signals == "Yes"),
@@ -689,64 +713,64 @@
               Tactile_Guide = sum(Tactile_Guide == "Yes"),
               Total_Stops = n()) 
   
-  df_list <- list(crosswalk_features, crosswalk_features_by_county, crosswalk_features_by_city)
+  df_list <- list(crosswalk_features, crosswalk_features_by_jurisdiction, crosswalk_features_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Crosswalk Features Summary")
   
   ## Observations
   # Informal Pathways
   informal_pathways <- simpleSummaryTableCreator(survey_df, "Informal_Pathways", NA)
-  informal_pathways_by_county <- simpleSummaryTableCreator(survey_df, "Informal_Pathways", "County")
-  informal_pathways_by_city <- simpleSummaryTableCreator(survey_df, "Informal_Pathways", "City")
+  informal_pathways_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Informal_Pathways", "MARTA_Jurisdiction")
+  informal_pathways_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Informal_Pathways", "City_Neighborhood")
   
-  df_list <- list(informal_pathways, informal_pathways_by_county, informal_pathways_by_city)
+  df_list <- list(informal_pathways, informal_pathways_by_jurisdiction, informal_pathways_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Informal Pathways")
   
   # Compete For Seat
   compete_for_seat <- simpleSummaryTableCreator(survey_df, "Compete_For_Seat", NA)
-  compete_for_seat_by_county <- simpleSummaryTableCreator(survey_df, "Compete_For_Seat", "County")
-  compete_for_seat_by_city <- simpleSummaryTableCreator(survey_df, "Compete_For_Seat", "City")
+  compete_for_seat_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Compete_For_Seat", "MARTA_Jurisdiction")
+  compete_for_seat_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Compete_For_Seat", "City_Neighborhood")
   
-  df_list <- list(compete_for_seat, compete_for_seat_by_county, compete_for_seat_by_city)
+  df_list <- list(compete_for_seat, compete_for_seat_by_jurisdiction, compete_for_seat_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Competing for Seating")
   
   # Cross Midblock
   cross_midblock <- simpleSummaryTableCreator(survey_df, "Cross_Midblock", NA)
-  cross_midblock_by_county <- simpleSummaryTableCreator(survey_df, "Cross_Midblock", "County")
-  cross_midblock_by_city <- simpleSummaryTableCreator(survey_df, "Cross_Midblock", "City")
+  cross_midblock_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Cross_Midblock", "MARTA_Jurisdiction")
+  cross_midblock_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Cross_Midblock", "City_Neighborhood")
   
-  df_list <- list(cross_midblock, cross_midblock_by_county, cross_midblock_by_city)
+  df_list <- list(cross_midblock, cross_midblock_by_jurisdiction, cross_midblock_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Crossing Midblock")
   
   # Catch The Bus
   catch_the_bus <- simpleSummaryTableCreator(survey_df, "Catch_The_Bus", NA)
-  catch_the_bus_by_county <- simpleSummaryTableCreator(survey_df, "Catch_The_Bus", "County")
-  catch_the_bus_by_city <- simpleSummaryTableCreator(survey_df, "Catch_The_Bus", "City")
+  catch_the_bus_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Catch_The_Bus", "MARTA_Jurisdiction")
+  catch_the_bus_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Catch_The_Bus", "City_Neighborhood")
   
-  df_list <- list(catch_the_bus, catch_the_bus_by_county, catch_the_bus_by_city)
+  df_list <- list(catch_the_bus, catch_the_bus_by_jurisdiction, catch_the_bus_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Running to Catch Bus")
   
   # Dangerous Motorists
   dangerous_motorists <- simpleSummaryTableCreator(survey_df, "Dangerous_Motorists", NA)
-  dangerous_motorists_by_county <- simpleSummaryTableCreator(survey_df, "Dangerous_Motorists", "County")
-  dangerous_motorists_by_city <- simpleSummaryTableCreator(survey_df, "Dangerous_Motorists", "City")
+  dangerous_motorists_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Dangerous_Motorists", "MARTA_Jurisdiction")
+  dangerous_motorists_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Dangerous_Motorists", "City_Neighborhood")
   
-  df_list <- list(dangerous_motorists, dangerous_motorists_by_county, dangerous_motorists_by_city)
+  df_list <- list(dangerous_motorists, dangerous_motorists_by_jurisdiction, dangerous_motorists_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Dangerous Motorist Behavior")
   
   # First Visit
   first_visit <- simpleSummaryTableCreator(survey_df, "First_Visit", NA)
-  first_visit_by_county <- simpleSummaryTableCreator(survey_df, "First_Visit", "County")
-  first_visit_by_city <- simpleSummaryTableCreator(survey_df, "First_Visit", "City")
+  first_visit_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "First_Visit", "MARTA_Jurisdiction")
+  first_visit_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "First_Visit", "City_Neighborhood")
   
-  df_list <- list(first_visit, first_visit_by_county, first_visit_by_city)
+  df_list <- list(first_visit, first_visit_by_jurisdiction, first_visit_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "First Time User - None Observed")
   
   # Regular User None
   regular_user_none <- simpleSummaryTableCreator(survey_df, "Regular_User_None", NA)
-  regular_user_none_by_county <- simpleSummaryTableCreator(survey_df, "Regular_User_None", "County")
-  regular_user_none_by_city <- simpleSummaryTableCreator(survey_df, "Regular_User_None", "City")
+  regular_user_none_by_jurisdiction <- simpleSummaryTableCreator(survey_df, "Regular_User_None", "MARTA_Jurisdiction")
+  regular_user_none_by_city_neighborhood <- simpleSummaryTableCreator(survey_df, "Regular_User_None", "City_Neighborhood")
   
-  df_list <- list(regular_user_none, regular_user_none_by_county, regular_user_none_by_city)
+  df_list <- list(regular_user_none, regular_user_none_by_jurisdiction, regular_user_none_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Regular User - None Observed")
   
   observations <- survey_df %>% 
@@ -764,10 +788,10 @@
     mutate(Percent_Total = format(Survey_Count / Total_Surveys, digits = 2)) %>%
     select(Observed_Behavior, Survey_Count, Total_Surveys, Percent_Total)
   
-  observations_by_county <- survey_df %>% 
-    select(Stop_ID, County, Informal_Pathways, Compete_For_Seat, Cross_Midblock, 
+  observations_by_jurisdiction <- survey_df %>% 
+    select(Stop_ID, MARTA_Jurisdiction, Informal_Pathways, Compete_For_Seat, Cross_Midblock, 
            Catch_The_Bus, Dangerous_Motorists, First_Visit, Regular_User_None) %>%
-    group_by(County) %>%
+    group_by(MARTA_Jurisdiction) %>%
     summarize(Informal_Pathways = sum(Informal_Pathways == "Yes"),
               Compete_For_Seat = sum(Compete_For_Seat == "Yes"),
               Cross_Midblock = sum(Cross_Midblock == "Yes"),
@@ -777,10 +801,10 @@
               Regular_User_None = sum(Regular_User_None == "Yes"),
               Total_Surveys = n())
   
-  observations_by_city <- survey_df %>% 
-    select(Stop_ID, City, Informal_Pathways, Compete_For_Seat, Cross_Midblock, 
+  observations_by_city_neighborhood <- survey_df %>% 
+    select(Stop_ID, City_Neighborhood, Informal_Pathways, Compete_For_Seat, Cross_Midblock, 
            Catch_The_Bus, Dangerous_Motorists, First_Visit, Regular_User_None) %>%
-    group_by(City) %>%
+    group_by(City_Neighborhood) %>%
     summarize(Informal_Pathways = sum(Informal_Pathways == "Yes"),
               Compete_For_Seat = sum(Compete_For_Seat == "Yes"),
               Cross_Midblock = sum(Cross_Midblock == "Yes"),
@@ -790,13 +814,13 @@
               Regular_User_None = sum(Regular_User_None == "Yes"),
               Total_Surveys = n())
   
-  df_list <- list(observations, observations_by_county, observations_by_city)
+  df_list <- list(observations, observations_by_jurisdiction, observations_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Observed Behavior Summary")
   
   ## Anecdotes
   additional_comments <- survey_df %>% 
     distinct(Stop_ID, Main_Street_or_Station, Nearest_Landmark, County,
-             City, Routes, Direction, Additional_Comments) %>%
+             City_Neighborhood, MARTA_Jurisdiction, Routes, Direction, Additional_Comments) %>%
     dplyr::filter(Additional_Comments != "")
   
   wb <- writeDataToExcel(list(additional_comments), wb, "Additional Comments")
@@ -843,46 +867,38 @@
   
   # Grading 
   grades <- survey_df %>%
-                mutate(Grade = ifelse(Shelter == "Yes", 10, 0) +
-                               ifelse(Seating == "No, there is no seating", 0, 10) +
-                               ifelse(str_count(paste(Route_Number,  Route_Schedule,  Route_Map, sep = ""), "Yes") == 0 & Customer_Service == "Yes", 0, 
-                                      ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "No", 4, 
-                                             ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "Yes", 8, 0))) +
-                               ifelse(Sidewalk == "Yes, in both directions" | Sidewalk == 'Yes, in only one direction', 25, 0) +
-                               ifelse(Trash_Can == "Yes", 2, 0) +
-                               ifelse(No_Crosswalk == "Yes", 0, 
-                                      ifelse(Main_Street_Crosswalk == "Yes" & 
-                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") == 0, 5, 
-                                      ifelse(Main_Street_Crosswalk == "Yes" &
-                                             str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") > 0 &
-                                             str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") <= 2, 15,
-                                      ifelse(Main_Street_Crosswalk == "Yes" &
-                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") > 2 &
-                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") <= 5, 25, 0)))) +
-                               ifelse(Boarding_Area == "Grass or dirt" | Boarding_Area == "Gravel", 0,
-                                      ifelse(Boarding_Area == "Asphalt", 5, 20)),
-                       Letter_Grade = case_when(
-                                          Grade >= 0 & Grade <= 59 ~ "F",
-                                          Grade > 59 & Grade <= 69 ~ "D",
-                                          Grade > 69 & Grade <= 79 ~ "C",
-                                          Grade > 79 & Grade <= 89 ~ "B",
-                                          Grade > 89 & Grade <= 100 ~ "A",
-                                          TRUE ~ ""
-                       ))
-
-  grade_detail <- grades %>% 
-                      distinct(Stop_ID, Stop_Lat, Stop_Lon, Letter_Grade, Grade, Seating,
-                             Shelter, Trash_Can, Route_Number, Route_Map,
-                             Route_Schedule, Wayfinding_Accessibility,
-                             Sidewalk, Main_Street_Crosswalk, Boarding_Area,
-                             Traffic_Light, Curb_Cuts, Crossing_Audio, Crosswalk_Signals, Tactile_Guide,
-                             Total_Weekly_Avg_Pre_COVID_Boardings, Total_Weekly_Avg_Pre_COVID_Alightings,
-                             Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, Total_Weekly_Avg_Post_COVID_Alightings,
-                             Total_Weekly_Avg_Post_COVID_Ons_Offs)
+    mutate(Grade = ifelse(Shelter == "Yes", 10, 0) +
+             ifelse(Seating == "No, there is no seating", 0, 10) +
+             ifelse(str_count(paste(Route_Number,  Route_Schedule,  Route_Map, sep = ""), "Yes") == 0 & Customer_Service == "Yes", 1, 
+                    ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "No", 2, 
+                           ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "Yes", 3, 0))) +
+             ifelse(Sidewalk == "Yes, in both directions" | Sidewalk == 'Yes, in only one direction', 25, 0) +
+             ifelse(Trash_Can == "Yes", 2, 0) +
+             (30 - ifelse((Road_Classification == "trunk" | Road_Classification == "primary"), (6 * (str_count(paste(Main_Street_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "No"))),
+                    ifelse(Road_Classification == "secondary",  (5 * (str_count(paste(Main_Street_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "No"))),
+                           ifelse(Road_Classification == "tertiary", (4 * (str_count(paste(Main_Street_Crosswalk, Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "No"))),
+                                  ifelse(Road_Classification == "residential", (3 * (str_count(paste(Main_Street_Crosswalk, Curb_Cuts, Tactile_Guide, sep = ""), "No"))),
+                                         ifelse(Road_Classification == "unclassified", (2 * (str_count(paste(Main_Street_Crosswalk, Curb_Cuts, Tactile_Guide, sep = ""), "No"))),
+                                                ifelse(Road_Classification == "service", (1 * (str_count(paste(Main_Street_Crosswalk, Curb_Cuts, Tactile_Guide, sep = ""), "No"))), 0))))))) +
+             ifelse(Boarding_Area == "Grass or dirt" | Boarding_Area == "Gravel", 0,
+                    ifelse(Boarding_Area == "Asphalt", 5, 20)),
+           Letter_Grade = case_when(
+             Grade >= 0 & Grade <= 59 ~ "F",
+             Grade > 59 & Grade <= 69 ~ "D",
+             Grade > 69 & Grade <= 79 ~ "C",
+             Grade > 79 & Grade <= 89 ~ "B",
+             Grade > 89 & Grade <= 100 ~ "A",
+             TRUE ~ ""
+           )) %>%
+    distinct(Stop_ID, Main_Street_or_Station, Nearest_Landmark, Stop_Lat, Stop_Lon, Routes, Direction, County, City_Neighborhood, MARTA_Jurisdiction, Shelter, Seating, Route_Number, Route_Schedule, Route_Map, Customer_Service, Wayfinding_Accessibility,
+           Sidewalk, Trash_Can, Road_Classification, Main_Street_Crosswalk, Traffic_Light, Curb_Cuts,
+           Crosswalk_Signals, Tactile_Guide, Boarding_Area, Grade, Letter_Grade, Total_Weekly_Avg_Pre_COVID_Boardings, 
+           Total_Weekly_Avg_Pre_COVID_Alightings, Total_Weekly_Avg_Pre_COVID_Ons_Offs, Total_Weekly_Avg_Post_COVID_Boardings, 
+           Total_Weekly_Avg_Post_COVID_Alightings, Total_Weekly_Avg_Post_COVID_Ons_Offs)
   
-  duplicate_stops <- grade_detail[duplicated(grade_detail$Stop_ID), ]
+  #duplicate_stops <- grade_detail[duplicated(grade_detail$Stop_ID), ]
   
-  grade_average <- grade_detail %>%
+  grade_average <- grades %>%
     mutate(Weighted = Grade * Total_Weekly_Avg_Pre_COVID_Ons_Offs) %>%
     select(Grade, Total_Weekly_Avg_Pre_COVID_Ons_Offs, Weighted) %>%
     summarize(Total_Ons_Offs = sum(Total_Weekly_Avg_Pre_COVID_Ons_Offs),
@@ -893,20 +909,19 @@
     select(Letter_Grade, Grade, Seating,
            Shelter, Trash_Can, Route_Number, Route_Map,
            Route_Schedule, Customer_Service, Wayfinding_Accessibility,
-           Sidewalk, Main_Street_Crosswalk, No_Crosswalk, Boarding_Area,
-           Traffic_Light, Curb_Cuts, Crossing_Audio, Crosswalk_Signals, Tactile_Guide) %>%
+           Sidewalk, Main_Street_Crosswalk, Boarding_Area,
+           Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide) %>%
     mutate(No_Wayfinding = ifelse(str_count(paste(Route_Number,  Route_Schedule,  Route_Map, sep = ""), "Yes") == 0 & Customer_Service == "Yes", "Yes", "No"),
            Non_Accessible_Wayfinding = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "No", "Yes", "No"),
            Accessible_Wayfinding = ifelse(str_count(paste(Route_Number, Route_Schedule, Route_Map, sep = ""), "Yes") >= 1 & Wayfinding_Accessibility == "Yes", "Yes", "No"),
-           No_Crosswalk = ifelse(No_Crosswalk == "Yes", "Yes", "No"),
            Main_Street_Crosswalk_Only = ifelse(Main_Street_Crosswalk == "Yes" & 
-                                                 str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") == 0, "Yes", "No"),
+                                                 str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "Yes") == 0, "Yes", "No"),
            Main_Street_Crosswalk_Some_Crossing_Amenities = ifelse(Main_Street_Crosswalk == "Yes" &
-                                                              str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") > 0 &
-                                                              str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") <= 2, "Yes", "No"),
+                                                              str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "Yes") > 0 &
+                                                              str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "Yes") <= 2, "Yes", "No"),
            Main_Street_Crosswalk_Most_Crossing_Amenities = ifelse(Main_Street_Crosswalk == "Yes" &
-                                                              str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") > 2 &
-                                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Crossing_Audio, Tactile_Guide, sep = ""), "Yes") <= 5, "Yes", "No")) %>%
+                                                              str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "Yes") > 2 &
+                                                               str_count(paste(Traffic_Light, Curb_Cuts, Crosswalk_Signals, Tactile_Guide, sep = ""), "Yes") <= 5, "Yes", "No")) %>%
     group_by(Letter_Grade) %>% 
     summarize(Stop_Count = n(),
               Seating = sum(Seating != "No, there is no seating"),
@@ -916,7 +931,6 @@
               Non_Accessible_Wayfinding = sum(Non_Accessible_Wayfinding == "Yes"),
               Accessible_Wayfinding = sum(Accessible_Wayfinding == "Yes"),
               Sidewalk = sum(Sidewalk != "No"),
-              No_Crosswalk = sum(No_Crosswalk == "Yes"),
               Main_Street_Crosswalk_Only = sum(Main_Street_Crosswalk_Only == "Yes"),
               Main_Street_Crosswalk_Some_Crossing_Amenities = sum(Main_Street_Crosswalk_Some_Crossing_Amenities == "Yes"),
               Main_Street_Crosswalk_Most_Crossing_Amenities = sum(Main_Street_Crosswalk_Most_Crossing_Amenities == "Yes"),
@@ -929,25 +943,24 @@
              Percent_Non_Accessible_Wayfinding = format(Non_Accessible_Wayfinding / Stop_Count, digits = 2),
              Percent_Accessible_Wayfinding = format(Accessible_Wayfinding / Stop_Count, digits = 2),
              Percent_Sidewalk = format(Sidewalk / Stop_Count, digits = 2),
-             Percent_No_Crosswalk = format(No_Crosswalk / Stop_Count, digits = 2),
              Percent_Main_Street_Crosswalk_Only = format(Main_Street_Crosswalk_Only / Stop_Count, digits = 2),
              Percent_Main_Street_Crosswalk_Some_Amenities = format(Main_Street_Crosswalk_Some_Crossing_Amenities / Stop_Count, digits = 2),
              Percent_Main_Street_Crosswalk_Most_Amenities = format(Main_Street_Crosswalk_Most_Crossing_Amenities / Stop_Count, digits = 2),
              Percent_Boarding_Area = format(Boarding_Area / Stop_Count, digits = 2)) %>%
     select(Letter_Grade, Stop_Count, Percent_Seating, Percent_Shelter, Percent_Trash_Can,
            Percent_No_Wayfinding, Percent_Non_Accessible_Wayfinding,
-           Percent_Accessible_Wayfinding, Percent_Sidewalk, Percent_No_Crosswalk,
-           Percent_No_Crosswalk, Percent_Main_Street_Crosswalk_Only, Percent_Main_Street_Crosswalk_Some_Amenities,
+           Percent_Accessible_Wayfinding, Percent_Sidewalk, Percent_Main_Street_Crosswalk_Only, 
+           Percent_Main_Street_Crosswalk_Some_Amenities,
            Percent_Main_Street_Crosswalk_Most_Amenities,  Percent_Boarding_Area)
     
   
-  wb <- writeDataToExcel(list(grade_detail), wb, "Grading Detail")
+  wb <- writeDataToExcel(list(grades), wb, "Grading Detail")
   
   grade_summary <- summaryTableCreator(grades, "Letter_Grade", NA)
-  grade_summary_by_county <- summaryTableCreator(grades, "Letter_Grade", "County")
-  grade_summary_by_city <- summaryTableCreator(grades, "Letter_Grade", "City")
+  grade_summary_by_jurisdiction <- summaryTableCreator(grades, "Letter_Grade", "MARTA_Jurisdiction")
+  grade_summary_by_city_neighborhood <- summaryTableCreator(grades, "Letter_Grade", "City_Neighborhood")
   
-  df_list <- list(grade_average, grade_summary, grade_summary_by_county, grade_summary_by_city)
+  df_list <- list(grade_average, grade_summary, grade_summary_by_jurisdiction, grade_summary_by_city_neighborhood)
   wb <- writeDataToExcel(df_list, wb, "Grading Summary")
     
   grade_list <- grades$Grade
@@ -972,7 +985,7 @@
   wb <- writeDataToExcel(report_tables, wb, "Report Tables")
   
   ######################### EXPORT RESULTS #########################
-  saveWorkbook(wb, here("data","tidy_data","Bus_Stop_Census_2020_Summary_Results.xlsx"), overwrite = TRUE)
+  saveWorkbook(wb, here("data","tidy_data","Bus_Stop_Census_2020_Summary_Results_V2.xlsx"), overwrite = TRUE)
 
   
   
