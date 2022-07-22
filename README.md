@@ -125,3 +125,8 @@ These are figures intended to be shared. This subsection describes which code in
 
 ### products
 This file contains any complete data analytics products that will be shared with our partners, MARTA, local governments, and the public.
+
+## Bus Stop Cenus Report, Data, and Photos
+The detailed and summary data from the Bus Stop Census 2020 can be found here: https://docs.google.com/spreadsheets/d/1fJLfHhWxzuTS5Tq-QTYgiEmA_y6joYR-UcRCFtowsGw/edit?usp=sharing
+
+Photos collected from the Bus Stop Census 2020 are published to our [Flickr Page](https://flic.kr/s/aHsmX8nrQn)
